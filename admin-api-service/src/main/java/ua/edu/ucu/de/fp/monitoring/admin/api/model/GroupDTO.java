@@ -1,7 +1,11 @@
 package ua.edu.ucu.de.fp.monitoring.admin.api.model;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import java.util.List;
 
 // DTOs using records for immutability (functional approach)
 public class GroupDTO {
@@ -10,7 +14,8 @@ public class GroupDTO {
             @NotBlank String name,
             @NotBlank String link,
             @NotNull Double latitude,
-            @NotNull Double longitude
+            @NotNull Double longitude,
+            @NotNull @Size(min = 3) List<@Valid PolygonPoint> polygon
     ) {}
     
     public record TelegramGroupResponse(
@@ -18,7 +23,15 @@ public class GroupDTO {
             String name,
             String link,
             Double latitude,
-            Double longitude
+            Double longitude,
+            List<PolygonPoint> polygon,
+            Double centroidLatitude,
+            Double centroidLongitude
+    ) {}
+
+    public record PolygonPoint(
+            @NotNull Double latitude,
+            @NotNull Double longitude
     ) {}
     
     public record ZoneRequest(

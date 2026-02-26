@@ -40,6 +40,41 @@
   gap: 0.5rem;
 }
 
+.polygon-section {
+  flex: 1 1 100%;
+  background-color: #252525;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.polygon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  color: #e0e0e0;
+}
+
+.polygon-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.polygon-help {
+  font-size: 0.9rem;
+  color: #b0b0b0;
+  margin-bottom: 0.75rem;
+}
+
+.group-map {
+  width: 100%;
+  height: 320px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
 .group-form button {
   padding: 0.75rem 1.5rem;
   background-color: #4CAF50;
@@ -122,4 +157,36 @@
 
 .groups-table button:last-child:hover {
   background-color: #da190b;
+}
+
+.polygon-link {
+  background: none;
+  border: none;
+  color: #4CAF50;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.95rem;
+}
+
+.polygon-link:hover {
+  text-decoration: underline;
+}
+
+.polygon-preview {
+  margin-top: 2rem;
+  background-color: #2d2d2d;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.polygon-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.polygon-preview-header h2 {
+  font-size: 1.2rem;
+  color: #4CAF50;
 }
