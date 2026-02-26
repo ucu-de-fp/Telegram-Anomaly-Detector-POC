@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.Polygon;
 
 @Entity
 @Table(name = "telegram_groups")
@@ -30,17 +31,31 @@ public class TelegramGroup {
     @NotNull(message = "Location is required")
     @Column(columnDefinition = "geometry(Point,4326)", nullable = false)
     private Point location;
+
+    @Column(columnDefinition = "geometry(Polygon,4326)")
+    private Polygon polygon;
+
+    @Column(columnDefinition = "geometry(Point,4326)")
+    private Point centroid;
     
     // Helper methods for functional transformations
     public TelegramGroup withName(String name) {
-        return new TelegramGroup(this.id, name, this.link, this.location);
+        return new TelegramGroup(this.id, name, this.link, this.location, this.polygon, this.centroid);
     }
     
     public TelegramGroup withLink(String link) {
-        return new TelegramGroup(this.id, this.name, link, this.location);
+        return new TelegramGroup(this.id, this.name, link, this.location, this.polygon, this.centroid);
     }
     
     public TelegramGroup withLocation(Point location) {
-        return new TelegramGroup(this.id, this.name, this.link, location);
+        return new TelegramGroup(this.id, this.name, this.link, location, this.polygon, this.centroid);
+    }
+
+    public TelegramGroup withPolygon(Polygon polygon) {
+        return new TelegramGroup(this.id, this.name, this.link, this.location, polygon, this.centroid);
+    }
+
+    public TelegramGroup withCentroid(Point centroid) {
+        return new TelegramGroup(this.id, this.name, this.link, this.location, this.polygon, centroid);
     }
 }
