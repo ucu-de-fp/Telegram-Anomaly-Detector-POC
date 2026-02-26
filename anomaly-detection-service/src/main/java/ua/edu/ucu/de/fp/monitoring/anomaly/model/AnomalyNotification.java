@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 public record AnomalyNotification(
     String groupName,
     String groupLink,
-    Double latitude,
-    Double longitude,
     String keyword,
     String content,
     LocalDateTime timestamp
@@ -15,8 +13,6 @@ public record AnomalyNotification(
         return new AnomalyNotification(
             event.groupName(),
             event.groupLink(),
-            event.latitude(),
-            event.longitude(),
             keyword,
             event.content(),
             event.timestamp()

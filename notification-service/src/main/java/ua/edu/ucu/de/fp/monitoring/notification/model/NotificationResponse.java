@@ -6,8 +6,6 @@ public record NotificationResponse(
     Long id,
     String groupName,
     String groupLink,
-    Double latitude,
-    Double longitude,
     String keyword,
     String content,
     LocalDateTime timestamp

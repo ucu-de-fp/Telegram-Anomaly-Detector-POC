@@ -20,15 +20,12 @@ public class Notification {
     
     private String groupName;
     private String groupLink;
-    private Double latitude;
-    private Double longitude;
     private String keyword;
     private String content;
     private LocalDateTime timestamp;
     
     // Functional helpers
     public Notification withId(Long id) {
-        return new Notification(id, groupName, groupLink, latitude, longitude, keyword, content, timestamp);
+        return new Notification(id, groupName, groupLink, keyword, content, timestamp);
     }
 }
-

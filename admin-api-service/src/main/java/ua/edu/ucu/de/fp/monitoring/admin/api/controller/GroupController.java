@@ -21,6 +21,12 @@ public class GroupController {
     public ResponseEntity<List<TelegramGroupResponse>> getAllGroups() {
         return ResponseEntity.ok(service.getAllGroups());
     }
+
+    @PostMapping("/search")
+    public ResponseEntity<List<TelegramGroupResponse>> searchGroupsByPolygon(
+            @Valid @RequestBody PolygonFilterRequest request) {
+        return ResponseEntity.ok(service.getGroupsIntersectingPolygon(request));
+    }
     
     @GetMapping("/{id}")
     public ResponseEntity<TelegramGroupResponse> getGroup(@PathVariable Long id) {

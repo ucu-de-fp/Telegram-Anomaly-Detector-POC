@@ -33,6 +33,10 @@ public class GroupDTO {
             @NotNull Double latitude,
             @NotNull Double longitude
     ) {}
+
+    public record PolygonFilterRequest(
+            @NotNull @Size(min = 3) List<@Valid PolygonPoint> polygon
+    ) {}
     
     public record ZoneRequest(
             @NotNull Double minLatitude,

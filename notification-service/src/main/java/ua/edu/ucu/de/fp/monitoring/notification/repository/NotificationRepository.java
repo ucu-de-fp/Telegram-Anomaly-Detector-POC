@@ -5,8 +5,12 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import ua.edu.ucu.de.fp.monitoring.notification.model.Notification;
 
+import java.util.Collection;
+
 @Repository
 public interface NotificationRepository extends ReactiveCrudRepository<Notification, Long> {
     
     Flux<Notification> findAllByOrderByTimestampDesc();
+
+    Flux<Notification> findAllByGroupLinkInOrderByTimestampDesc(Collection<String> groupLinks);
 }

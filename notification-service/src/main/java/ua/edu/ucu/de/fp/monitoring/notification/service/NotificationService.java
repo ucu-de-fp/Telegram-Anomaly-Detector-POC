@@ -13,7 +13,10 @@ import ua.edu.ucu.de.fp.monitoring.notification.model.NotificationEvent;
 import ua.edu.ucu.de.fp.monitoring.notification.model.NotificationResponse;
 import ua.edu.ucu.de.fp.monitoring.notification.repository.NotificationRepository;
 
+import java.util.Collection;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,8 +36,6 @@ public class NotificationService {
             null,
             event.groupName(),
             event.groupLink(),
-            event.latitude(),
-            event.longitude(),
             event.keyword(),
             event.content(),
             event.timestamp()
@@ -45,8 +46,6 @@ public class NotificationService {
             notification.getId(),
             notification.getGroupName(),
             notification.getGroupLink(),
-            notification.getLatitude(),
-            notification.getLongitude(),
             notification.getKeyword(),
             notification.getContent(),
             notification.getTimestamp()
@@ -82,10 +81,38 @@ public class NotificationService {
     public Flux<NotificationResponse> getNotificationStream() {
         return notificationSink.asFlux();
     }
+
+    public Flux<NotificationResponse> getNotificationStreamByGroupLinks(Collection<String> groupLinks) {
+        if (groupLinks == null || groupLinks.isEmpty()) {
+            return Flux.empty();
+        }
+        Set<String> linkSet = groupLinks.stream()
+            .filter(link -> link != null && !link.isBlank())
+            .collect(Collectors.toSet());
+        if (linkSet.isEmpty()) {
+            return Flux.empty();
+        }
+        return notificationSink.asFlux()
+            .filter(notification -> linkSet.contains(notification.groupLink()));
+    }
     
     // Get historical notifications
     public Flux<NotificationResponse> getAllNotifications() {
         return repository.findAllByOrderByTimestampDesc()
+            .map(entityToResponse);
+    }
+
+    public Flux<NotificationResponse> getNotificationsByGroupLinks(Collection<String> groupLinks) {
+        if (groupLinks == null || groupLinks.isEmpty()) {
+            return Flux.empty();
+        }
+        Set<String> linkSet = groupLinks.stream()
+            .filter(link -> link != null && !link.isBlank())
+            .collect(Collectors.toSet());
+        if (linkSet.isEmpty()) {
+            return Flux.empty();
+        }
+        return repository.findAllByGroupLinkInOrderByTimestampDesc(linkSet)
             .map(entityToResponse);
     }
 }
