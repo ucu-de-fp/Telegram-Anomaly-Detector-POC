@@ -3,6 +3,7 @@ package ua.edu.ucu.de.fp.monitoring.ingestion.service;
 import java.time.Duration;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -14,8 +15,11 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 import ua.edu.ucu.de.fp.monitoring.ingestion.model.TelegramMessage;
+import ua.edu.ucu.de.fp.monitoring.ingestion.repository.TelegramGroupRepository;
+import ua.edu.ucu.de.fp.monitoring.ingestion.repository.TelegramGroupRepository.TelegramGroupRow;
 
 /**
  * Mock service that generates random Telegram messages from Ukrainian locations.
@@ -32,6 +36,7 @@ public class MockTelegramIngestionService {
     
     private final RabbitTemplate rabbitTemplate;
     private final JsonMapper jsonMapper;
+    private final TelegramGroupRepository groupRepository;
     
     @Value("${ingestion.queue.name}")
     private String queueName;
@@ -40,18 +45,7 @@ public class MockTelegramIngestionService {
     private int intervalSeconds;
     
     private final Random random = new Random();
-    
-    // Mock Ukrainian cities with coordinates
-    private final List<GroupLocation> ukrainianGroups = List.of(
-        new GroupLocation("Kyiv Tech Community", "https://t.me/kyiv_tech", 50.4501, 30.5234),
-        new GroupLocation("Lviv Developers", "https://t.me/lviv_dev", 49.8397, 24.0297),
-        new GroupLocation("Odesa IT Hub", "https://t.me/odesa_it", 46.4825, 30.7233),
-        new GroupLocation("Kharkiv Coders", "https://t.me/kharkiv_code", 49.9935, 36.2304),
-        new GroupLocation("Dnipro DevOps", "https://t.me/dnipro_devops", 48.4647, 35.0462),
-        new GroupLocation("Zaporizhzhia JS", "https://t.me/zp_js", 47.8388, 35.1396),
-        new GroupLocation("Vinnytsia Python", "https://t.me/vn_python", 49.2328, 28.4681),
-        new GroupLocation("Chernivtsi Tech", "https://t.me/cv_tech", 48.2916, 25.9356)
-    );
+    private final AtomicBoolean loggedNoGroups = new AtomicBoolean(false);
     
     private final List<String> mockMessages = List.of(
         "Check out this new project!",
@@ -67,22 +61,8 @@ public class MockTelegramIngestionService {
     );
     
     // Functional supplier for generating random messages
-    private final Supplier<TelegramMessage> messageGenerator = () -> {
-        GroupLocation group = ukrainianGroups.get(random.nextInt(ukrainianGroups.size()));
-        String content = mockMessages.get(random.nextInt(mockMessages.size()));
-        
-        // Add some random variation to coordinates
-        double latVariation = (random.nextDouble() - 0.5) * 0.1;
-        double lonVariation = (random.nextDouble() - 0.5) * 0.1;
-        
-        return TelegramMessage.create(
-            group.name(),
-            group.link(),
-            group.latitude() + latVariation,
-            group.longitude() + lonVariation,
-            content
-        );
-    };
+    private final Supplier<String> contentGenerator = () ->
+        mockMessages.get(random.nextInt(mockMessages.size()));
     
     @PostConstruct
     public void startIngestion() {
@@ -90,9 +70,30 @@ public class MockTelegramIngestionService {
         
         // Reactive stream: infinite flux with intervals
         Flux.interval(Duration.ofSeconds(intervalSeconds))
-            .map(tick -> messageGenerator.get())
-            .doOnNext(message -> log.info("Generated message: {} from {}", 
-                                         message.content(), message.groupName()))
+            .flatMap(tick -> groupRepository.findAllGroups()
+                .collectList()
+                .onErrorResume(error -> {
+                    log.error("Failed to load groups for mock ingestion", error);
+                    return Mono.just(List.of());
+                }))
+            .flatMap(groups -> {
+                if (groups.isEmpty()) {
+                    if (loggedNoGroups.compareAndSet(false, true)) {
+                        log.warn("No groups configured. Skipping mock ingestion.");
+                    }
+                    return Flux.empty();
+                }
+                loggedNoGroups.set(false);
+                TelegramGroupRow group = groups.get(random.nextInt(groups.size()));
+                TelegramMessage message = TelegramMessage.create(
+                    group.name(),
+                    group.link(),
+                    contentGenerator.get()
+                );
+                return Flux.just(message);
+            })
+            .doOnNext(message -> log.info("Generated message: {} from {}",
+                message.content(), message.groupName()))
             .map(this::toJson)
             .filter(json -> json != null)
             .subscribe(
@@ -109,6 +110,4 @@ public class MockTelegramIngestionService {
             return null;
         }
     }
-    
-    private record GroupLocation(String name, String link, Double latitude, Double longitude) {}
 }

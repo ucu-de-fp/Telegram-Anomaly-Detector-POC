@@ -83,7 +83,7 @@ services:
       dockerfile: Dockerfile
     container_name: telegram-ingestion-service
     environment:
-      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/notification
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/admin
       SPRING_R2DBC_USERNAME: monitoring
       SPRING_R2DBC_PASSWORD: monitoring123
       SPRING_RABBITMQ_HOST: rabbitmq
