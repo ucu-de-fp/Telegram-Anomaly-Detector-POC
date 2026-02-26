@@ -19,11 +19,105 @@
   background-color: #2d2d2d;
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .notification-map {
   width: 100%;
   height: 600px;
+}
+
+.filter-panel {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #3d3d3d;
+}
+
+.filter-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.filter-panel h2 {
+  color: #4CAF50;
+  font-size: 1.1rem;
+}
+
+.filter-panel p {
+  color: #c0c0c0;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-actions button {
+  padding: 0.5rem 1rem;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s;
+}
+
+.filter-actions button:hover {
+  background-color: #45a049;
+}
+
+.filter-actions button:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.filter-hint {
+  margin-top: 0.5rem;
+  color: #ff9800;
+  font-size: 0.9rem;
+}
+
+.notification-count-marker {
+  position: relative;
+  transform: translate(-50%, -100%);
+}
+
+.notification-count-marker .marker-pin {
+  width: 14px;
+  height: 14px;
+  background: #4CAF50;
+  border: 2px solid #ffffff;
+  border-radius: 50% 50% 50% 0;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 8px;
+  top: 16px;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
+}
+
+.notification-count-marker .marker-count {
+  position: absolute;
+  top: 0;
+  left: 14px;
+  background: #1f1f1f;
+  border: 1px solid #4CAF50;
+  color: #e0e0e0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.notification-count-marker.new .marker-pin {
+  animation: blink 0.6s ease-in-out 3;
 }
 
 .notifications-table-container {

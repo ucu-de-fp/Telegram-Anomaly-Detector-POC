@@ -6,15 +6,11 @@ import java.time.LocalDateTime;
 public record TelegramMessage(
     String groupName,
     String groupLink,
-    Double latitude,
-    Double longitude,
     String content,
     LocalDateTime timestamp
 ) {
     // Factory method for creating messages with current timestamp
-    public static TelegramMessage create(String groupName, String groupLink, 
-                                        Double latitude, Double longitude, String content) {
-        return new TelegramMessage(groupName, groupLink, latitude, longitude, 
-                                  content, LocalDateTime.now());
+    public static TelegramMessage create(String groupName, String groupLink, String content) {
+        return new TelegramMessage(groupName, groupLink, content, LocalDateTime.now());
     }
 }

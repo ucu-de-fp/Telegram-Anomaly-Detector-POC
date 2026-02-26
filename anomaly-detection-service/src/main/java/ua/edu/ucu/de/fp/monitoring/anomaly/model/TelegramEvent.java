@@ -6,8 +6,6 @@ import java.time.LocalDateTime;
 public record TelegramEvent(
     String groupName,
     String groupLink,
-    Double latitude,
-    Double longitude,
     String content,
     LocalDateTime timestamp
 ) {}

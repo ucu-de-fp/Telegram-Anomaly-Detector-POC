@@ -14,4 +14,7 @@ public interface TelegramGroupRepository extends JpaRepository<TelegramGroup, Lo
     
     @Query(value = "SELECT * FROM telegram_groups WHERE ST_Within(location, :zone)", nativeQuery = true)
     List<TelegramGroup> findGroupsWithinZone(@Param("zone") Polygon zone);
+
+    @Query(value = "SELECT * FROM telegram_groups WHERE polygon IS NOT NULL AND ST_Intersects(polygon, :zone)", nativeQuery = true)
+    List<TelegramGroup> findGroupsIntersectingZone(@Param("zone") Polygon zone);
 }

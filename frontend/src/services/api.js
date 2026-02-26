@@ -14,6 +14,7 @@ export const groupAPI = {
   create: (data) => api.post('/api/groups', data),
   update: (id, data) => api.put(`/api/groups/${id}`, data),
   delete: (id) => api.delete(`/api/groups/${id}`),
+  searchByPolygon: (data) => api.post('/api/groups/search', data),
 };
 
 // Zone Management API
@@ -25,7 +26,15 @@ export const zoneAPI = {
 // Notification API
 export const notificationAPI = {
   getHistory: () => axios.get(`${NOTIFICATION_BASE}/api/notifications/history`),
-  subscribe: () => `${NOTIFICATION_BASE}/api/notifications`,
+  searchByGroupLinks: (groupLinks) =>
+    axios.post(`${NOTIFICATION_BASE}/api/notifications/search`, { groupLinks }),
+  subscribe: (groupLinks) => {
+    if (!groupLinks || groupLinks.length === 0) {
+      return `${NOTIFICATION_BASE}/api/notifications?groupLinks=`;
+    }
+    const params = groupLinks.map((link) => `groupLinks=${encodeURIComponent(link)}`).join('&');
+    return `${NOTIFICATION_BASE}/api/notifications?${params}`;
+  },
 };
 
 export default api;

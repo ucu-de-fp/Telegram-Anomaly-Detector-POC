@@ -26,11 +26,72 @@ public class GroupManagementService {
     private final ZoneOfInterestRepository zoneRepository;
     private final GeometryFactory geometryFactory = new GeometryFactory();
     
+    private Polygon toPolygon(List<PolygonPoint> points) {
+        if (points == null || points.size() < 3) {
+            throw new IllegalArgumentException("Polygon must contain at least 3 points");
+        }
+        Coordinate[] coords = new Coordinate[points.size() + 1];
+        for (int i = 0; i < points.size(); i++) {
+            PolygonPoint point = points.get(i);
+            coords[i] = new Coordinate(point.longitude(), point.latitude());
+        }
+        coords[points.size()] = coords[0];
+        Polygon polygon = geometryFactory.createPolygon(coords);
+        polygon.setSRID(4326);
+        return polygon;
+    }
+    
+    private List<PolygonPoint> toPointList(Polygon polygon) {
+        if (polygon == null) {
+            return List.of();
+        }
+        Coordinate[] coords = polygon.getCoordinates();
+        if (coords.length == 0) {
+            return List.of();
+        }
+        int length = coords.length;
+        if (length > 1 && coords[0].equals2D(coords[length - 1])) {
+            length -= 1;
+        }
+        List<PolygonPoint> points = new ArrayList<>(length);
+        for (int i = 0; i < length; i++) {
+            points.add(new PolygonPoint(coords[i].y, coords[i].x));
+        }
+        return points;
+    }
+
+    private Point toCentroid(Polygon polygon) {
+        if (polygon == null) {
+            return null;
+        }
+        Point centroid = polygon.getCentroid();
+        centroid.setSRID(4326);
+        return centroid;
+    }
+
+    private Double centroidLatitude(TelegramGroup group) {
+        Point centroid = group.getCentroid();
+        if (centroid == null && group.getPolygon() != null) {
+            centroid = toCentroid(group.getPolygon());
+        }
+        return centroid == null ? null : centroid.getY();
+    }
+
+    private Double centroidLongitude(TelegramGroup group) {
+        Point centroid = group.getCentroid();
+        if (centroid == null && group.getPolygon() != null) {
+            centroid = toCentroid(group.getPolygon());
+        }
+        return centroid == null ? null : centroid.getX();
+    }
+    
     // Functional transformations
     private final Function<TelegramGroupRequest, TelegramGroup> requestToEntity = req -> {
         Point point = geometryFactory.createPoint(new Coordinate(req.longitude(), req.latitude()));
         point.setSRID(4326);
-        return new TelegramGroup(null, req.name(), req.link(), point);
+        Polygon polygon = toPolygon(req.polygon());
+        Point centroid = toCentroid(polygon);
+        return new TelegramGroup(null, req.name(), req.link(), point, polygon, centroid);
     };
     
     private final Function<TelegramGroup, TelegramGroupResponse> entityToResponse = group -> 
@@ -39,7 +100,10 @@ public class GroupManagementService {
             group.getName(),
             group.getLink(),
             group.getLocation().getY(),
-            group.getLocation().getX()
+            group.getLocation().getX(),
+            toPointList(group.getPolygon()),
+            centroidLatitude(group),
+            centroidLongitude(group)
         );
     
     private final Function<ZoneRequest, Polygon> zoneRequestToPolygon = req -> {
@@ -73,6 +137,13 @@ public class GroupManagementService {
             .map(entityToResponse)
             .toList();
     }
+
+    public List<TelegramGroupResponse> getGroupsIntersectingPolygon(PolygonFilterRequest request) {
+        Polygon polygon = toPolygon(request.polygon());
+        return groupRepository.findGroupsIntersectingZone(polygon).stream()
+            .map(entityToResponse)
+            .toList();
+    }
     
     public Optional<TelegramGroupResponse> getGroupById(Long id) {
         return groupRepository.findById(id)
@@ -96,9 +167,13 @@ public class GroupManagementService {
                     new Coordinate(request.longitude(), request.latitude())
                 );
                 point.setSRID(4326);
+                Polygon polygon = toPolygon(request.polygon());
+                Point centroid = toCentroid(polygon);
                 return existing.withName(request.name())
                              .withLink(request.link())
-                             .withLocation(point);
+                             .withLocation(point)
+                             .withPolygon(polygon)
+                             .withCentroid(centroid);
             })
             .map(groupRepository::save)
             .map(entityToResponse);
