@@ -55,7 +55,7 @@ public class AnomalyDetectionService {
     public void processEvent(String message) {
         try {
             TelegramEvent event = jsonMapper.readValue(message, TelegramEvent.class);
-            log.debug("Processing event: \"{}\" from group \"{}\"", event.content(), event.groupName());
+            log.debug("Processing event: \"{}\" from groupId \"{}\"", event.content(), event.groupId());
             
             // Functional composition: parse -> filter -> transform -> publish
             Optional.of(event)
@@ -68,9 +68,9 @@ public class AnomalyDetectionService {
                 .ifPresentOrElse(
                     json -> {
                         rabbitTemplate.convertAndSend(targetQueue, json);
-                        log.info("Anomaly detected and published: {}", event.groupName());
+                        log.info("Anomaly detected and published: {}", event.groupId());
                     },
-                    () -> log.debug("No anomaly detected in event from {}", event.groupName())
+                    () -> log.debug("No anomaly detected in event from {}", event.groupId())
                 );
                 
         } catch (Exception e) {

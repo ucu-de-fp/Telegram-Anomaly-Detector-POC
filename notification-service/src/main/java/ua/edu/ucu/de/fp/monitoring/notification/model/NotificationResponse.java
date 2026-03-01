@@ -4,8 +4,7 @@ import java.time.LocalDateTime;
 
 public record NotificationResponse(
     Long id,
-    String groupName,
-    String groupLink,
+    Long groupId,
     String keyword,
     String content,
     LocalDateTime timestamp

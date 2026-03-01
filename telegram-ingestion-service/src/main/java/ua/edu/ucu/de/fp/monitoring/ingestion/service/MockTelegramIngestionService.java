@@ -86,14 +86,13 @@ public class MockTelegramIngestionService {
                 loggedNoGroups.set(false);
                 TelegramGroupRow group = groups.get(random.nextInt(groups.size()));
                 TelegramMessage message = TelegramMessage.create(
-                    group.name(),
-                    group.link(),
+                    group.id(),
                     contentGenerator.get()
                 );
                 return Flux.just(message);
             })
-            .doOnNext(message -> log.info("Generated message: {} from {}",
-                message.content(), message.groupName()))
+            .doOnNext(message -> log.info("Generated message: {} from groupId {}",
+                message.content(), message.groupId()))
             .map(this::toJson)
             .filter(json -> json != null)
             .subscribe(
