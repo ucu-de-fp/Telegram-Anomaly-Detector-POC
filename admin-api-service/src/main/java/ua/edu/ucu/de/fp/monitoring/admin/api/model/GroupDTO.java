@@ -13,8 +13,6 @@ public class GroupDTO {
     public record TelegramGroupRequest(
             @NotBlank String name,
             @NotBlank String link,
-            @NotNull Double latitude,
-            @NotNull Double longitude,
             @NotNull @Size(min = 3) List<@Valid PolygonPoint> polygon
     ) {}
     
@@ -22,8 +20,6 @@ public class GroupDTO {
             Long id,
             String name,
             String link,
-            Double latitude,
-            Double longitude,
             List<PolygonPoint> polygon,
             Double centroidLatitude,
             Double centroidLongitude

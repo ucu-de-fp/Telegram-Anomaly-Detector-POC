@@ -87,11 +87,9 @@ public class GroupManagementService {
     
     // Functional transformations
     private final Function<TelegramGroupRequest, TelegramGroup> requestToEntity = req -> {
-        Point point = geometryFactory.createPoint(new Coordinate(req.longitude(), req.latitude()));
-        point.setSRID(4326);
         Polygon polygon = toPolygon(req.polygon());
         Point centroid = toCentroid(polygon);
-        return new TelegramGroup(null, req.name(), req.link(), point, polygon, centroid);
+        return new TelegramGroup(null, req.name(), req.link(), polygon, centroid);
     };
     
     private final Function<TelegramGroup, TelegramGroupResponse> entityToResponse = group -> 
@@ -99,8 +97,6 @@ public class GroupManagementService {
             group.getId(),
             group.getName(),
             group.getLink(),
-            group.getLocation().getY(),
-            group.getLocation().getX(),
             toPointList(group.getPolygon()),
             centroidLatitude(group),
             centroidLongitude(group)
@@ -163,15 +159,10 @@ public class GroupManagementService {
     public Optional<TelegramGroupResponse> updateGroup(Long id, TelegramGroupRequest request) {
         return groupRepository.findById(id)
             .map(existing -> {
-                Point point = geometryFactory.createPoint(
-                    new Coordinate(request.longitude(), request.latitude())
-                );
-                point.setSRID(4326);
                 Polygon polygon = toPolygon(request.polygon());
                 Point centroid = toCentroid(polygon);
                 return existing.withName(request.name())
                              .withLink(request.link())
-                             .withLocation(point)
                              .withPolygon(polygon)
                              .withCentroid(centroid);
             })
