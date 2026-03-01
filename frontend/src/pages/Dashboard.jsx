@@ -22,8 +22,8 @@ const Dashboard = () => {
   const [newNotificationIds, setNewNotificationIds] = useState(new Set());
   const [filterPolygon, setFilterPolygon] = useState([]);
   const [isDrawingFilter, setIsDrawingFilter] = useState(false);
-  const [groupLinks, setGroupLinks] = useState([]);
-  const [groupsByLink, setGroupsByLink] = useState({});
+  const [groupIds, setGroupIds] = useState([]);
+  const [groupsById, setGroupsById] = useState({});
   const eventSourceRef = useRef(null);
 
   useEffect(() => {
@@ -45,43 +45,43 @@ const Dashboard = () => {
         : await groupAPI.getAll();
 
       const groups = response.data || [];
-      const links = Array.from(
-        new Set(groups.map((group) => group.link).filter(Boolean))
+      const ids = Array.from(
+        new Set(groups.map((group) => group.id).filter((id) => id != null))
       );
-      setGroupLinks(links);
+      setGroupIds(ids);
       const groupMap = {};
       groups.forEach((group) => {
-        if (group?.link) {
-          groupMap[group.link] = group;
+        if (group?.id != null) {
+          groupMap[group.id] = group;
         }
       });
-      setGroupsByLink(groupMap);
+      setGroupsById(groupMap);
 
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
 
-      if (links.length === 0) {
+      if (ids.length === 0) {
         setNotifications([]);
         setNewNotificationIds(new Set());
         return;
       }
 
-      const history = await notificationAPI.searchByGroupLinks(links);
+      const history = await notificationAPI.searchByGroupIds(ids);
       setNotifications(history.data || []);
       setNewNotificationIds(new Set());
-      connectSSE(links);
+      connectSSE(ids);
     } catch (error) {
       console.error('Error refreshing notifications:', error);
     }
   };
 
-  const connectSSE = (links) => {
-    if (!links || links.length === 0) {
+  const connectSSE = (ids) => {
+    if (!ids || ids.length === 0) {
       return;
     }
 
-    const eventSource = new EventSource(notificationAPI.subscribe(links));
+    const eventSource = new EventSource(notificationAPI.subscribe(ids));
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
@@ -106,7 +106,7 @@ const Dashboard = () => {
 
       setTimeout(() => {
         console.log('Reconnecting to SSE...');
-        connectSSE(links);
+        connectSSE(ids);
       }, 5000);
     };
   };
@@ -135,13 +135,13 @@ const Dashboard = () => {
     const counts = {};
     const newCounts = {};
     notifications.forEach((notification) => {
-      const link = notification.groupLink;
-      if (!link) {
+      const groupId = notification.groupId;
+      if (groupId == null) {
         return;
       }
-      counts[link] = (counts[link] || 0) + 1;
+      counts[groupId] = (counts[groupId] || 0) + 1;
       if (newNotificationIds.has(notification.id)) {
-        newCounts[link] = true;
+        newCounts[groupId] = true;
       }
     });
     return { counts, newCounts };
@@ -149,20 +149,20 @@ const Dashboard = () => {
 
   const markers = useMemo(() => {
     return Object.entries(groupedNotifications.counts)
-      .map(([link, count]) => {
-        const group = groupsByLink[link];
+      .map(([groupId, count]) => {
+        const group = groupsById[groupId];
         if (!group || group.centroidLatitude == null || group.centroidLongitude == null) {
           return null;
         }
         return {
-          link,
+          groupId,
           count,
           group,
-          isNew: Boolean(groupedNotifications.newCounts[link]),
+          isNew: Boolean(groupedNotifications.newCounts[groupId]),
         };
       })
       .filter(Boolean);
-  }, [groupedNotifications, groupsByLink]);
+  }, [groupedNotifications, groupsById]);
 
   const createCountIcon = (count, isNew) => {
     return L.divIcon({
@@ -191,10 +191,10 @@ const Dashboard = () => {
             </div>
             <p>
               Draw a polygon to filter notifications by group area overlap.
-              {groupLinks.length > 0 && (
-                <> Showing {groupLinks.length} group(s).</>
+              {groupIds.length > 0 && (
+                <> Showing {groupIds.length} group(s).</>
               )}
-              {groupLinks.length === 0 && (
+              {groupIds.length === 0 && (
                 <> No groups matched.</>
               )}
             </p>
@@ -243,7 +243,7 @@ const Dashboard = () => {
             ))}
             {markers.map((marker) => (
               <Marker
-                key={marker.link}
+                key={marker.groupId}
                 position={[marker.group.centroidLatitude, marker.group.centroidLongitude]}
                 icon={createCountIcon(marker.count, marker.isNew)}
               >
@@ -280,9 +280,19 @@ const Dashboard = () => {
                 >
                   <td>{new Date(notif.timestamp).toLocaleTimeString()}</td>
                   <td>
-                    <a href={notif.groupLink} target="_blank" rel="noopener noreferrer">
-                      {notif.groupName}
-                    </a>
+                    {(() => {
+                      const group = groupsById[notif.groupId];
+                      const groupName = group?.name || notif.groupName || (notif.groupId != null ? `Group ${notif.groupId}` : 'Unknown group');
+                      const groupLink = group?.link || notif.groupLink;
+                      if (!groupLink) {
+                        return groupName;
+                      }
+                      return (
+                        <a href={groupLink} target="_blank" rel="noopener noreferrer">
+                          {groupName}
+                        </a>
+                      );
+                    })()}
                   </td>
                   <td><span className="keyword-badge">{notif.keyword}</span></td>
                   <td>{notif.content}</td>

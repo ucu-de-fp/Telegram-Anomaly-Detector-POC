@@ -25,11 +25,11 @@ public class NotificationController {
     
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<NotificationResponse> streamNotifications(
-            @RequestParam(name = "groupLinks", required = false) java.util.List<String> groupLinks) {
-        if (groupLinks == null) {
+            @RequestParam(name = "groupIds", required = false) java.util.List<Long> groupIds) {
+        if (groupIds == null) {
             return service.getNotificationStream();
         }
-        return service.getNotificationStreamByGroupLinks(groupLinks);
+        return service.getNotificationStreamByGroupIds(groupIds);
     }
     
     @GetMapping("/history")
@@ -38,8 +38,8 @@ public class NotificationController {
     }
 
     @PostMapping("/search")
-    public Flux<NotificationResponse> searchByGroupLinks(
+    public Flux<NotificationResponse> searchByGroupIds(
             @RequestBody NotificationSearchRequest request) {
-        return service.getNotificationsByGroupLinks(request.groupLinks());
+        return service.getNotificationsByGroupIds(request.groupIds());
     }
 }

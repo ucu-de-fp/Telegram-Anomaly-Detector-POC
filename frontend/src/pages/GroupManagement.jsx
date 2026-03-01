@@ -1,7 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Polygon, Polyline, CircleMarker, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Polyline, CircleMarker, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import { groupAPI } from '../services/api';
 import './GroupManagement.css';
+
+const DEFAULT_CENTER = [50.4501, 30.5234];
+const centroidFromGroup = (group) => {
+  if (!group || group.centroidLatitude == null || group.centroidLongitude == null) {
+    return null;
+  }
+  return [group.centroidLatitude, group.centroidLongitude];
+};
+
+const centroidIcon = L.divIcon({
+  className: 'notification-count-marker',
+  html: '<div class="marker-pin"></div>',
+  iconSize: [30, 42],
+  iconAnchor: [15, 42],
+  popupAnchor: [0, -36],
+});
 
 const PolygonSelector = ({ onAddPoint }) => {
   useMapEvents({
@@ -18,12 +35,12 @@ const GroupManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     link: '',
-    latitude: 50.4501,
-    longitude: 30.5234,
     polygon: [],
   });
   const [editingId, setEditingId] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER);
+  const [editingCentroid, setEditingCentroid] = useState(null);
 
   useEffect(() => {
     loadGroups();
@@ -61,11 +78,17 @@ const GroupManagement = () => {
     setFormData({
       name: group.name,
       link: group.link,
-      latitude: group.latitude,
-      longitude: group.longitude,
       polygon: group.polygon || [],
     });
     setEditingId(group.id);
+    const centroid = centroidFromGroup(group);
+    if (centroid) {
+      setMapCenter(centroid);
+      setEditingCentroid(centroid);
+      return;
+    }
+    setMapCenter(DEFAULT_CENTER);
+    setEditingCentroid(null);
   };
 
   const handleSelectPolygon = (group) => {
@@ -90,11 +113,11 @@ const GroupManagement = () => {
     setFormData({
       name: '',
       link: '',
-      latitude: 50.4501,
-      longitude: 30.5234,
       polygon: [],
     });
     setEditingId(null);
+    setMapCenter(DEFAULT_CENTER);
+    setEditingCentroid(null);
   };
 
   const addPolygonPoint = (latlng) => {
@@ -122,6 +145,8 @@ const GroupManagement = () => {
   const selectedPolygonLatLngs = selectedGroup?.polygon
     ? selectedGroup.polygon.map((point) => [point.latitude, point.longitude])
     : [];
+  const selectedCentroid = centroidFromGroup(selectedGroup);
+  const selectedMapCenter = selectedCentroid || DEFAULT_CENTER;
 
   return (
     <div className="group-management">
@@ -142,22 +167,6 @@ const GroupManagement = () => {
           onChange={(e) => setFormData({ ...formData, link: e.target.value })}
           required
         />
-        <input
-          type="number"
-          step="0.0001"
-          placeholder="Latitude"
-          value={formData.latitude}
-          onChange={(e) => setFormData({ ...formData, latitude: parseFloat(e.target.value) })}
-          required
-        />
-        <input
-          type="number"
-          step="0.0001"
-          placeholder="Longitude"
-          value={formData.longitude}
-          onChange={(e) => setFormData({ ...formData, longitude: parseFloat(e.target.value) })}
-          required
-        />
         <div className="polygon-section">
           <div className="polygon-header">
             <strong>Group Area (Polygon)</strong>
@@ -175,7 +184,7 @@ const GroupManagement = () => {
             Click on the map to add vertices. You need at least 3 points.
           </div>
           <MapContainer
-            center={[formData.latitude, formData.longitude]}
+            center={mapCenter}
             zoom={6}
             doubleClickZoom={false}
             className="group-map"
@@ -199,6 +208,12 @@ const GroupManagement = () => {
                 pathOptions={{ color: '#4CAF50', fillColor: '#4CAF50', fillOpacity: 0.9 }}
               />
             ))}
+            {editingCentroid && (
+              <Marker
+                position={editingCentroid}
+                icon={centroidIcon}
+              />
+            )}
           </MapContainer>
         </div>
         <div className="form-actions">
@@ -212,8 +227,7 @@ const GroupManagement = () => {
           <tr>
             <th>Name</th>
             <th>Link</th>
-            <th>Latitude</th>
-            <th>Longitude</th>
+            <th>Centroid</th>
             <th>Polygon</th>
             <th>Actions</th>
           </tr>
@@ -227,8 +241,11 @@ const GroupManagement = () => {
                   {group.link}
                 </a>
               </td>
-              <td>{group.latitude.toFixed(4)}</td>
-              <td>{group.longitude.toFixed(4)}</td>
+              <td>
+                {group.centroidLatitude != null && group.centroidLongitude != null
+                  ? `${group.centroidLatitude.toFixed(4)}, ${group.centroidLongitude.toFixed(4)}`
+                  : '—'}
+              </td>
               <td>
                 {group.polygon && group.polygon.length > 0 ? (
                   <button
@@ -261,11 +278,7 @@ const GroupManagement = () => {
           </span>
         </div>
         <MapContainer
-          center={
-            selectedGroup
-              ? [selectedGroup.latitude, selectedGroup.longitude]
-              : [49.0, 32.0]
-          }
+          center={selectedGroup ? selectedMapCenter : [49.0, 32.0]}
           zoom={selectedGroup ? 7 : 6}
           className="group-map"
         >
@@ -277,6 +290,12 @@ const GroupManagement = () => {
             <Polygon
               positions={selectedPolygonLatLngs}
               pathOptions={{ color: '#4CAF50', weight: 2, fillOpacity: 0.2 }}
+            />
+          )}
+          {selectedCentroid && (
+            <Marker
+              position={selectedCentroid}
+              icon={centroidIcon}
             />
           )}
         </MapContainer>
