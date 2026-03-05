@@ -129,8 +129,38 @@
 }
 
 .notifications-table-container h2 {
-  margin-bottom: 1rem;
+  margin: 0;
   color: #4CAF50;
+}
+
+.notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.notification-view-toggle {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.notification-view-toggle button {
+  padding: 0.45rem 0.8rem;
+  border: 1px solid #4CAF50;
+  border-radius: 999px;
+  background-color: transparent;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.notification-view-toggle button.active {
+  background-color: #4CAF50;
+  color: #102010;
+  font-weight: 600;
 }
 
 .notifications-table {
@@ -158,6 +188,14 @@
   background-color: #3d3d3d;
 }
 
+.notification-row.read td {
+  opacity: 0.75;
+}
+
+.notification-row.unread td {
+  opacity: 1;
+}
+
 .notifications-table a {
   color: #4CAF50;
   text-decoration: none;
@@ -178,6 +216,22 @@
 
 .new-notification {
   animation: highlightRow 2s ease-in-out;
+}
+
+.mark-read-button {
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #4CAF50;
+  border-radius: 4px;
+  background-color: transparent;
+  color: #d5f5d7;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.mark-read-button:disabled {
+  border-color: #666;
+  color: #888;
+  cursor: default;
 }
 
 @keyframes highlightRow {

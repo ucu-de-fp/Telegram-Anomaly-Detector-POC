@@ -4,6 +4,11 @@ import L from 'leaflet';
 import { groupAPI, notificationAPI } from '../services/api';
 import './Dashboard.css';
 
+const VIEW_MODE = {
+  UNREAD: 'unread',
+  ALL: 'all',
+};
+
 const PolygonSelector = ({ isDrawing, onAddPoint }) => {
   useMapEvents({
     click: (e) => {
@@ -20,6 +25,8 @@ const PolygonSelector = ({ isDrawing, onAddPoint }) => {
 const Dashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [newNotificationIds, setNewNotificationIds] = useState(new Set());
+  const [markingAsReadIds, setMarkingAsReadIds] = useState(new Set());
+  const [notificationView, setNotificationView] = useState(VIEW_MODE.UNREAD);
   const [filterPolygon, setFilterPolygon] = useState([]);
   const [isDrawingFilter, setIsDrawingFilter] = useState(false);
   const [groupIds, setGroupIds] = useState([]);
@@ -27,18 +34,19 @@ const Dashboard = () => {
   const eventSourceRef = useRef(null);
 
   useEffect(() => {
-    refreshForPolygon(filterPolygon);
-  }, [filterPolygon]);
+    refreshForPolygon(filterPolygon, notificationView);
+  }, [filterPolygon, notificationView]);
 
   useEffect(() => {
     return () => {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
     };
   }, []);
 
-  const refreshForPolygon = async (polygon) => {
+  const refreshForPolygon = async (polygon, view) => {
     try {
       const response = polygon.length >= 3
         ? await groupAPI.searchByPolygon({ polygon })
@@ -59,20 +67,66 @@ const Dashboard = () => {
 
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
 
       if (ids.length === 0) {
         setNotifications([]);
         setNewNotificationIds(new Set());
+        setMarkingAsReadIds(new Set());
         return;
       }
 
-      const history = await notificationAPI.searchByGroupIds(ids);
+      const unreadOnly = view === VIEW_MODE.UNREAD;
+      const history = await notificationAPI.searchByGroupIds(ids, unreadOnly);
       setNotifications(history.data || []);
       setNewNotificationIds(new Set());
+      setMarkingAsReadIds(new Set());
       connectSSE(ids);
     } catch (error) {
       console.error('Error refreshing notifications:', error);
+    }
+  };
+
+  const applyNotificationUpdate = (notification, eventType = 'CREATED') => {
+    if (!notification || notification.id == null) {
+      return;
+    }
+
+    setNotifications((prev) => {
+      const index = prev.findIndex((item) => item.id === notification.id);
+      if (index === -1) {
+        if (eventType === 'READ') {
+          return prev;
+        }
+        return [notification, ...prev];
+      }
+
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        ...notification,
+      };
+      return next;
+    });
+
+    if (eventType === 'CREATED') {
+      setNewNotificationIds((prev) => new Set(prev).add(notification.id));
+      setTimeout(() => {
+        setNewNotificationIds((prev) => {
+          const next = new Set(prev);
+          next.delete(notification.id);
+          return next;
+        });
+      }, 2000);
+    }
+
+    if (eventType === 'READ') {
+      setNewNotificationIds((prev) => {
+        const next = new Set(prev);
+        next.delete(notification.id);
+        return next;
+      });
     }
   };
 
@@ -85,30 +139,51 @@ const Dashboard = () => {
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
-      const notification = JSON.parse(event.data);
-      console.log('Received notification:', notification);
-
-      setNotifications((prev) => [notification, ...prev]);
-      setNewNotificationIds((prev) => new Set(prev).add(notification.id));
-
-      setTimeout(() => {
-        setNewNotificationIds((prev) => {
-          const next = new Set(prev);
-          next.delete(notification.id);
-          return next;
-        });
-      }, 2000);
+      const streamEvent = JSON.parse(event.data);
+      const notification = streamEvent?.payload ?? streamEvent;
+      const eventType = streamEvent?.type || 'CREATED';
+      console.log('Received notification event:', streamEvent);
+      applyNotificationUpdate(notification, eventType);
     };
 
     eventSource.onerror = (error) => {
       console.error('SSE error:', error);
       eventSource.close();
+      if (eventSourceRef.current !== eventSource) {
+        return;
+      }
 
       setTimeout(() => {
+        if (eventSourceRef.current !== eventSource) {
+          return;
+        }
         console.log('Reconnecting to SSE...');
         connectSSE(ids);
       }, 5000);
     };
+  };
+
+  const handleMarkAsRead = async (notificationId) => {
+    if (notificationId == null) {
+      return;
+    }
+    if (markingAsReadIds.has(notificationId)) {
+      return;
+    }
+
+    setMarkingAsReadIds((prev) => new Set(prev).add(notificationId));
+    try {
+      const response = await notificationAPI.markAsRead(notificationId);
+      applyNotificationUpdate(response.data, 'READ');
+    } catch (error) {
+      console.error(`Error marking notification ${notificationId} as read:`, error);
+    } finally {
+      setMarkingAsReadIds((prev) => {
+        const next = new Set(prev);
+        next.delete(notificationId);
+        return next;
+      });
+    }
   };
 
   const addFilterPoint = (latlng) => {
@@ -131,10 +206,22 @@ const Dashboard = () => {
     point.longitude,
   ]);
 
+  const visibleNotifications = useMemo(() => {
+    if (notificationView === VIEW_MODE.UNREAD) {
+      return notifications.filter((notification) => !notification.isRead);
+    }
+    return notifications;
+  }, [notificationView, notifications]);
+
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !notification.isRead).length,
+    [notifications]
+  );
+
   const groupedNotifications = useMemo(() => {
     const counts = {};
     const newCounts = {};
-    notifications.forEach((notification) => {
+    visibleNotifications.forEach((notification) => {
       const groupId = notification.groupId;
       if (groupId == null) {
         return;
@@ -145,7 +232,7 @@ const Dashboard = () => {
       }
     });
     return { counts, newCounts };
-  }, [notifications, newNotificationIds]);
+  }, [newNotificationIds, visibleNotifications]);
 
   const markers = useMemo(() => {
     return Object.entries(groupedNotifications.counts)
@@ -197,6 +284,7 @@ const Dashboard = () => {
               {groupIds.length === 0 && (
                 <> No groups matched.</>
               )}
+              <> Mode: {notificationView === VIEW_MODE.UNREAD ? 'Unread' : 'All'}.</>
             </p>
             <div className="filter-actions">
               <button type="button" onClick={() => setIsDrawingFilter((prev) => !prev)}>
@@ -262,7 +350,25 @@ const Dashboard = () => {
         </div>
 
         <div className="notifications-table-container">
-          <h2>Recent Notifications</h2>
+          <div className="notifications-header">
+            <h2>Recent Notifications</h2>
+            <div className="notification-view-toggle">
+              <button
+                type="button"
+                className={notificationView === VIEW_MODE.UNREAD ? 'active' : ''}
+                onClick={() => setNotificationView(VIEW_MODE.UNREAD)}
+              >
+                Unread ({unreadCount})
+              </button>
+              <button
+                type="button"
+                className={notificationView === VIEW_MODE.ALL ? 'active' : ''}
+                onClick={() => setNotificationView(VIEW_MODE.ALL)}
+              >
+                All ({notifications.length})
+              </button>
+            </div>
+          </div>
           <table className="notifications-table">
             <thead>
               <tr>
@@ -270,13 +376,15 @@ const Dashboard = () => {
                 <th>Group</th>
                 <th>Keyword</th>
                 <th>Content</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {notifications.map((notif) => (
+              {visibleNotifications.map((notif) => (
                 <tr
                   key={notif.id}
-                  className={newNotificationIds.has(notif.id) ? 'new-notification' : ''}
+                  className={`notification-row${newNotificationIds.has(notif.id) ? ' new-notification' : ''}${notif.isRead ? ' read' : ' unread'}`}
                 >
                   <td>{new Date(notif.timestamp).toLocaleTimeString()}</td>
                   <td>
@@ -296,11 +404,22 @@ const Dashboard = () => {
                   </td>
                   <td><span className="keyword-badge">{notif.keyword}</span></td>
                   <td>{notif.content}</td>
+                  <td>{notif.isRead ? 'Read' : 'Unread'}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="mark-read-button"
+                      disabled={Boolean(notif.isRead) || markingAsReadIds.has(notif.id)}
+                      onClick={() => handleMarkAsRead(notif.id)}
+                    >
+                      {notif.isRead ? 'Read' : (markingAsReadIds.has(notif.id) ? 'Saving...' : 'Mark as read')}
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {notifications.length === 0 && (
+              {visibleNotifications.length === 0 && (
                 <tr>
-                  <td colSpan="4">No notifications found.</td>
+                  <td colSpan="6">No notifications found.</td>
                 </tr>
               )}
             </tbody>

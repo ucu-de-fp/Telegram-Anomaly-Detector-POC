@@ -7,5 +7,6 @@ public record NotificationResponse(
     Long groupId,
     String keyword,
     String content,
-    LocalDateTime timestamp
+    LocalDateTime timestamp,
+    Boolean isRead
 ) {}

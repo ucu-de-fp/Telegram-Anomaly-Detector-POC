@@ -3,6 +3,8 @@ package ua.edu.ucu.de.fp.monitoring.notification.controller;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,8 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import ua.edu.ucu.de.fp.monitoring.notification.model.NotificationSearchRequest;
 import ua.edu.ucu.de.fp.monitoring.notification.model.NotificationResponse;
+import ua.edu.ucu.de.fp.monitoring.notification.model.NotificationStreamEvent;
 import ua.edu.ucu.de.fp.monitoring.notification.service.NotificationService;
 
 @RestController
@@ -24,7 +28,7 @@ public class NotificationController {
     private final NotificationService service;
     
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<NotificationResponse> streamNotifications(
+    public Flux<NotificationStreamEvent> streamNotifications(
             @RequestParam(name = "groupIds", required = false) java.util.List<Long> groupIds) {
         if (groupIds == null) {
             return service.getNotificationStream();
@@ -33,13 +37,19 @@ public class NotificationController {
     }
     
     @GetMapping("/history")
-    public Flux<NotificationResponse> getHistory() {
-        return service.getAllNotifications();
+    public Flux<NotificationResponse> getHistory(
+            @RequestParam(name = "unreadOnly", required = false) Boolean unreadOnly) {
+        return service.getAllNotifications(unreadOnly);
     }
 
     @PostMapping("/search")
     public Flux<NotificationResponse> searchByGroupIds(
             @RequestBody NotificationSearchRequest request) {
-        return service.getNotificationsByGroupIds(request.groupIds());
+        return service.getNotificationsByGroupIds(request.groupIds(), request.unreadOnly());
+    }
+
+    @PatchMapping("/{id}/read")
+    public Mono<NotificationResponse> markAsRead(@PathVariable("id") Long id) {
+        return service.markAsRead(id);
     }
 }

@@ -13,4 +13,8 @@ public interface NotificationRepository extends ReactiveCrudRepository<Notificat
     Flux<Notification> findAllByOrderByTimestampDesc();
 
     Flux<Notification> findAllByGroupIdInOrderByTimestampDesc(Collection<Long> groupIds);
+
+    Flux<Notification> findAllByIsReadFalseOrderByTimestampDesc();
+
+    Flux<Notification> findAllByGroupIdInAndIsReadFalseOrderByTimestampDesc(Collection<Long> groupIds);
 }

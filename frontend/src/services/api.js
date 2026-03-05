@@ -25,9 +25,12 @@ export const zoneAPI = {
 
 // Notification API
 export const notificationAPI = {
-  getHistory: () => axios.get(`${NOTIFICATION_BASE}/api/notifications/history`),
-  searchByGroupIds: (groupIds) =>
-    axios.post(`${NOTIFICATION_BASE}/api/notifications/search`, { groupIds }),
+  getHistory: (unreadOnly = false) =>
+    axios.get(`${NOTIFICATION_BASE}/api/notifications/history`, { params: { unreadOnly } }),
+  searchByGroupIds: (groupIds, unreadOnly = false) =>
+    axios.post(`${NOTIFICATION_BASE}/api/notifications/search`, { groupIds, unreadOnly }),
+  markAsRead: (notificationId) =>
+    axios.patch(`${NOTIFICATION_BASE}/api/notifications/${notificationId}/read`),
   subscribe: (groupIds) => {
     if (!groupIds || groupIds.length === 0) {
       return `${NOTIFICATION_BASE}/api/notifications?groupIds=`;
