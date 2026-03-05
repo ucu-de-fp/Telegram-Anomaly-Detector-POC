@@ -22,9 +22,14 @@ public class Notification {
     private String keyword;
     private String content;
     private LocalDateTime timestamp;
+    private Boolean isRead;
     
     // Functional helpers
     public Notification withId(Long id) {
-        return new Notification(id, groupId, keyword, content, timestamp);
+        return new Notification(id, groupId, keyword, content, timestamp, isRead);
+    }
+
+    public Notification asRead() {
+        return new Notification(id, groupId, keyword, content, timestamp, true);
     }
 }

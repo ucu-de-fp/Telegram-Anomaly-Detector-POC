@@ -35,6 +35,7 @@ const GroupManagement = () => {
   const [formData, setFormData] = useState({
     name: '',
     link: '',
+    telegramGroupId: '',
     polygon: [],
   });
   const [editingId, setEditingId] = useState(null);
@@ -62,15 +63,28 @@ const GroupManagement = () => {
       return;
     }
     try {
+      const parsedTelegramGroupId = Number(formData.telegramGroupId);
+      if (!Number.isInteger(parsedTelegramGroupId)) {
+        alert('Telegram Group ID must be a valid integer.');
+        return;
+      }
+      const payload = {
+        ...formData,
+        telegramGroupId: parsedTelegramGroupId,
+      };
       if (editingId) {
-        await groupAPI.update(editingId, formData);
+        await groupAPI.update(editingId, payload);
       } else {
-        await groupAPI.create(formData);
+        await groupAPI.create(payload);
       }
       loadGroups();
       resetForm();
     } catch (error) {
       console.error('Error saving group:', error);
+      const errorMessage = error?.response?.data?.message;
+      if (errorMessage) {
+        alert(errorMessage);
+      }
     }
   };
 
@@ -78,6 +92,7 @@ const GroupManagement = () => {
     setFormData({
       name: group.name,
       link: group.link,
+      telegramGroupId: group.telegramGroupId ?? '',
       polygon: group.polygon || [],
     });
     setEditingId(group.id);
@@ -113,6 +128,7 @@ const GroupManagement = () => {
     setFormData({
       name: '',
       link: '',
+      telegramGroupId: '',
       polygon: [],
     });
     setEditingId(null);
@@ -165,6 +181,14 @@ const GroupManagement = () => {
           placeholder="Group Link"
           value={formData.link}
           onChange={(e) => setFormData({ ...formData, link: e.target.value })}
+          required
+        />
+        <input
+          type="number"
+          placeholder="Telegram Group ID"
+          value={formData.telegramGroupId}
+          step="1"
+          onChange={(e) => setFormData({ ...formData, telegramGroupId: e.target.value })}
           required
         />
         <div className="polygon-section">
@@ -227,6 +251,7 @@ const GroupManagement = () => {
           <tr>
             <th>Name</th>
             <th>Link</th>
+            <th>Telegram ID</th>
             <th>Centroid</th>
             <th>Polygon</th>
             <th>Actions</th>
@@ -241,6 +266,7 @@ const GroupManagement = () => {
                   {group.link}
                 </a>
               </td>
+              <td>{group.telegramGroupId ?? '—'}</td>
               <td>
                 {group.centroidLatitude != null && group.centroidLongitude != null
                   ? `${group.centroidLatitude.toFixed(4)}, ${group.centroidLongitude.toFixed(4)}`

@@ -5,8 +5,10 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import ua.edu.ucu.de.fp.monitoring.admin.api.model.GroupDTO.*;
 import ua.edu.ucu.de.fp.monitoring.admin.api.model.TelegramGroup;
 import ua.edu.ucu.de.fp.monitoring.admin.api.model.ZoneOfInterest;
@@ -89,7 +91,7 @@ public class GroupManagementService {
     private final Function<TelegramGroupRequest, TelegramGroup> requestToEntity = req -> {
         Polygon polygon = toPolygon(req.polygon());
         Point centroid = toCentroid(polygon);
-        return new TelegramGroup(null, req.name(), req.link(), polygon, centroid);
+        return new TelegramGroup(null, req.name(), req.link(), req.telegramGroupId(), polygon, centroid);
     };
     
     private final Function<TelegramGroup, TelegramGroupResponse> entityToResponse = group -> 
@@ -97,6 +99,7 @@ public class GroupManagementService {
             group.getId(),
             group.getName(),
             group.getLink(),
+            group.getTelegramGroupId(),
             toPointList(group.getPolygon()),
             centroidLatitude(group),
             centroidLongitude(group)
@@ -148,6 +151,12 @@ public class GroupManagementService {
     
     @Transactional
     public TelegramGroupResponse createGroup(TelegramGroupRequest request) {
+        if (groupRepository.existsByTelegramGroupId(request.telegramGroupId())) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Telegram group id already exists: " + request.telegramGroupId()
+            );
+        }
         return Optional.of(request)
             .map(requestToEntity)
             .map(groupRepository::save)
@@ -157,12 +166,19 @@ public class GroupManagementService {
     
     @Transactional
     public Optional<TelegramGroupResponse> updateGroup(Long id, TelegramGroupRequest request) {
+        if (groupRepository.existsByTelegramGroupIdAndIdNot(request.telegramGroupId(), id)) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Telegram group id already exists: " + request.telegramGroupId()
+            );
+        }
         return groupRepository.findById(id)
             .map(existing -> {
                 Polygon polygon = toPolygon(request.polygon());
                 Point centroid = toCentroid(polygon);
                 return existing.withName(request.name())
                              .withLink(request.link())
+                             .withTelegramGroupId(request.telegramGroupId())
                              .withPolygon(polygon)
                              .withCentroid(centroid);
             })
