@@ -75,6 +75,24 @@
   overflow: hidden;
 }
 
+.notification-count-marker {
+  position: relative;
+  transform: translate(-50%, -100%);
+}
+
+.notification-count-marker .marker-pin {
+  width: 14px;
+  height: 14px;
+  background: #4CAF50;
+  border: 2px solid #ffffff;
+  border-radius: 50% 50% 50% 0;
+  position: absolute;
+  transform: rotate(-45deg);
+  left: 8px;
+  top: 16px;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
+}
+
 .group-form button {
   padding: 0.75rem 1.5rem;
   background-color: #4CAF50;

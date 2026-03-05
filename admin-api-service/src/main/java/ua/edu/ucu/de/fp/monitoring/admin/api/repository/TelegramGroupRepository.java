@@ -12,7 +12,7 @@ import java.util.List;
 @Repository
 public interface TelegramGroupRepository extends JpaRepository<TelegramGroup, Long> {
     
-    @Query(value = "SELECT * FROM telegram_groups WHERE ST_Within(location, :zone)", nativeQuery = true)
+    @Query(value = "SELECT * FROM telegram_groups WHERE centroid IS NOT NULL AND ST_Within(centroid, :zone)", nativeQuery = true)
     List<TelegramGroup> findGroupsWithinZone(@Param("zone") Polygon zone);
 
     @Query(value = "SELECT * FROM telegram_groups WHERE polygon IS NOT NULL AND ST_Intersects(polygon, :zone)", nativeQuery = true)

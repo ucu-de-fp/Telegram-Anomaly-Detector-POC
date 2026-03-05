@@ -26,13 +26,13 @@ export const zoneAPI = {
 // Notification API
 export const notificationAPI = {
   getHistory: () => axios.get(`${NOTIFICATION_BASE}/api/notifications/history`),
-  searchByGroupLinks: (groupLinks) =>
-    axios.post(`${NOTIFICATION_BASE}/api/notifications/search`, { groupLinks }),
-  subscribe: (groupLinks) => {
-    if (!groupLinks || groupLinks.length === 0) {
-      return `${NOTIFICATION_BASE}/api/notifications?groupLinks=`;
+  searchByGroupIds: (groupIds) =>
+    axios.post(`${NOTIFICATION_BASE}/api/notifications/search`, { groupIds }),
+  subscribe: (groupIds) => {
+    if (!groupIds || groupIds.length === 0) {
+      return `${NOTIFICATION_BASE}/api/notifications?groupIds=`;
     }
-    const params = groupLinks.map((link) => `groupLinks=${encodeURIComponent(link)}`).join('&');
+    const params = groupIds.map((id) => `groupIds=${encodeURIComponent(id)}`).join('&');
     return `${NOTIFICATION_BASE}/api/notifications?${params}`;
   },
 };

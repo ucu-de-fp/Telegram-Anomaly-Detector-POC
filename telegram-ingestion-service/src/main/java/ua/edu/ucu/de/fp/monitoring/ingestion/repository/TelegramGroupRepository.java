@@ -13,19 +13,16 @@ public class TelegramGroupRepository {
 
     public Flux<TelegramGroupRow> findAllGroups() {
         return databaseClient.sql("""
-                SELECT name,
-                       link
+                SELECT id
                 FROM telegram_groups
                 """)
             .map((row, meta) -> new TelegramGroupRow(
-                row.get("name", String.class),
-                row.get("link", String.class)
+                row.get("id", Long.class)
             ))
             .all();
     }
 
     public record TelegramGroupRow(
-        String name,
-        String link
+        Long id
     ) {}
 }
