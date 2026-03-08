@@ -1,4 +1,4 @@
-# telegram-ingestion-service-telethon
+# telegram-ingestion-service
 
 A Telegram message ingestion service built with **Telethon** and written in a
 **functional programming style**.  This is a course project demonstrating
@@ -66,7 +66,7 @@ You **never** need to run `python -m venv` or `pip install` manually.
 
 ```bash
 # Clone / navigate to the project
-cd telegram-ingestion-service-telethon
+cd telegram-ingestion-service
 
 # Install dependencies (creates venv automatically)
 poetry install

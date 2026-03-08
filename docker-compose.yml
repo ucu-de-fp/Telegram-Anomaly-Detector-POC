@@ -85,14 +85,14 @@ services:
   telegram-ingestion-telethon:
     profiles: ["app"]
     build:
-      context: ./telegram-ingestion-service-telethon
+      context: ./telegram-ingestion-service
       dockerfile: Dockerfile
     container_name: telegram-ingestion-telethon
     restart: unless-stopped
     ports:
       - "8083:8080"    # cache-management HTTP API (avoid clash with other services)
     env_file:
-      - ./telegram-ingestion-service-telethon/.env.${APP_ENV:-example}
+      - ./telegram-ingestion-service/.env.${APP_ENV:-example}
 
     volumes:
       # Persist the Telethon session across container restarts.

@@ -138,7 +138,7 @@ async def main() -> None:
 
     logger.info(
         "═══════════════════════════════════════════════════════════\n"
-        "  telegram-ingestion-service-telethon  starting up\n"
+        "  telegram-ingestion-service  starting up\n"
         f"  message source: {settings.message_source}\n"
         "═══════════════════════════════════════════════════════════"
     )

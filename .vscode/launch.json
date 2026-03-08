@@ -6,10 +6,10 @@
       "type": "debugpy",
       "request": "launch",
       "module": "telegram_ingestion.main",
-      "cwd": "${workspaceFolder}/telegram-ingestion-service-telethon",
-      "envFile": "${workspaceFolder}/telegram-ingestion-service-telethon/.env.dev.local",
+      "cwd": "${workspaceFolder}/telegram-ingestion-service",
+      "envFile": "${workspaceFolder}/telegram-ingestion-service/.env.dev.local",
       "env": {
-        "PYTHONPATH": "${workspaceFolder}/telegram-ingestion-service-telethon/src"
+        "PYTHONPATH": "${workspaceFolder}/telegram-ingestion-service/src"
       }
     }
   ]

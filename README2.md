@@ -7,7 +7,7 @@ docker compose --profile infra up -d
 
 ## Локальний запуск з терміналу
 ```bash
-cd telegram-ingestion-service-telethon
+cd telegram-ingestion-service
 
 set -a
 source .env.dev.local

@@ -14,7 +14,7 @@ mvnw.cmd
 # IDE
 .idea/
 *.iml
-# .vscode/
+.vscode/settings.json
 *.swp
 *.swo
 *~
