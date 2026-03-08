@@ -1,0 +1,59 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1 — builder: resolve deps + build a wheel for the app itself
+# ─────────────────────────────────────────────────────────────────────────────
+# Use 3.12-slim because 3.14 does not yet have an official Docker image.
+# The code is fully compatible with 3.14 — swap the tag once it is published.
+FROM python:3.12-slim AS builder
+
+ENV POETRY_VERSION=1.8.3 \
+    POETRY_HOME=/opt/poetry \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_NO_INTERACTION=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN pip install "poetry==${POETRY_VERSION}"
+ENV PATH="${POETRY_HOME}/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy manifests first — this layer is cached unless deps change
+COPY pyproject.toml poetry.lock* ./
+
+# Install runtime dependencies only (no app code yet, no root package)
+RUN poetry install --only main --no-root
+
+# Copy source and build a proper installable wheel (not an editable install)
+COPY README.md ./
+COPY src/ src/
+RUN poetry build --format wheel
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2 — runtime: install the wheel into the venv, drop everything else
+# ─────────────────────────────────────────────────────────────────────────────
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:${PATH}"
+
+RUN useradd --system --create-home --home-dir /app appuser
+
+WORKDIR /app
+
+# Copy the pre-resolved venv (all third-party deps already installed)
+COPY --from=builder /app/.venv /app/.venv
+
+# Install the app wheel into the venv — this puts telegram_ingestion
+# properly into site-packages with no editable / .pth file magic
+COPY --from=builder /app/dist/*.whl /tmp/
+RUN /app/.venv/bin/pip install --no-deps /tmp/*.whl && rm /tmp/*.whl
+
+RUN mkdir -p /app/session /app/test_data \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 8080
+
+CMD ["python", "-m", "telegram_ingestion.main"]

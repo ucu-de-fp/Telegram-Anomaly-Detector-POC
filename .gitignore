@@ -36,3 +36,11 @@ Thumbs.db
 
 # Docker
 *.log
+
+### Custom
+.env
+.env.dev
+.env.test
+.env.prod
+.env.dev.local
+.env.prod.local

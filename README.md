@@ -21,9 +21,16 @@ A functional reactive data processing pipeline for monitoring Telegram groups wi
 
 ## Quick Start
 
+1. Run once to initialize telegram ingestion service (first run might fail)
 ```bash
-docker-compose up --build
-docker compose --parallel 8 up --build
+APP_ENV=dev docker compose run --build --rm telegram-ingestion-telethon
+```
+
+2. Run the whole setup
+```bash
+APP_ENV=dev docker-compose up
+APP_ENV=dev docker-compose up --build
+APP_ENV=dev docker compose --parallel 8 up --build
 docker-compose build --parallel
 ```
 

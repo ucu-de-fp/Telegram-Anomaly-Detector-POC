@@ -1,0 +1,47 @@
+[tool.poetry]
+name = "telegram-ingestion-service"
+version = "0.1.0"
+description = "Telegram message ingestion service using Telethon (functional-style)"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{ include = "telegram_ingestion", from = "src" }]
+
+[tool.poetry.dependencies]
+# Python 3.14 is targeted. The upper bound <4 is required by aio-pika.
+python = ">=3.12,<4"
+
+# Telegram MTProto client
+telethon = "^1.36"
+
+# Async PostgreSQL driver (read-only access to PostGIS-enabled DB)
+asyncpg = "^0.30"
+
+# Geometry / spatial intersection (Shapely 2.x ships with its own GEOS)
+shapely = "^2.0"
+
+# AMQP / RabbitMQ
+aio-pika = "^9.4"
+
+# HTTP API for cache management
+fastapi = "^0.115"
+uvicorn = { version = "^0.32", extras = ["standard"] }
+
+# Settings / config (reads .env + env vars)
+pydantic = "^2.0"
+pydantic-settings = "^2.6"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-asyncio = "^0.24"
+httpx = "^0.28"   # FastAPI test client
+
+[tool.poetry.scripts]
+# Run via: poetry run start
+start = "telegram_ingestion.main:entrypoint"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

@@ -1,0 +1,47 @@
+{
+  "name": "Test Monitoring Group",
+  "type": "public_supergroup",
+  "id": 1234567890,
+  "messages": [
+    {
+      "id": 1,
+      "type": "message",
+      "date": "2024-03-01T08:00:00",
+      "date_unixtime": "1709280000",
+      "from": "Alice",
+      "from_id": "user111",
+      "text": "Good morning! All clear in sector A."
+    },
+    {
+      "id": 2,
+      "type": "message",
+      "date": "2024-03-01T08:05:00",
+      "date_unixtime": "1709280300",
+      "from": "Bob",
+      "from_id": "user222",
+      "text": [
+        "Heads up — ",
+        { "type": "bold", "text": "unusual activity" },
+        " spotted near the river crossing."
+      ]
+    },
+    {
+      "id": 3,
+      "type": "service",
+      "date": "2024-03-01T08:10:00",
+      "date_unixtime": "1709280600",
+      "actor": "Alice",
+      "action": "pin_message",
+      "text": ""
+    },
+    {
+      "id": 4,
+      "type": "message",
+      "date": "2024-03-01T08:30:00",
+      "date_unixtime": "1709281800",
+      "from": "Alice",
+      "from_id": "user111",
+      "text": "Update: situation resolved."
+    }
+  ]
+}
