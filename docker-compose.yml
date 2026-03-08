@@ -92,7 +92,7 @@ services:
     ports:
       - "8083:8080"    # cache-management HTTP API (avoid clash with other services)
     env_file:
-      - ./telegram-ingestion-service/.env.${APP_ENV:-example}
+      - ./telegram-ingestion-service/.env.${APP_ENV:-example}.docker
 
     volumes:
       # Persist the Telethon session across container restarts.

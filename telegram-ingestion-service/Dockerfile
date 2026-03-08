@@ -16,6 +16,7 @@ WORKDIR /app
 
 # Copy manifests first — this layer is cached unless deps change
 COPY pyproject.toml poetry.lock* README.md ./
+COPY test/ test/
 COPY src/ src/
 
 # Install only third-party runtime deps (skip the app package itself)
@@ -42,6 +43,9 @@ WORKDIR /app
 
 # Copy the pre-resolved venv (all third-party deps)
 COPY --from=builder /app/.venv /app/.venv
+# TODO: change
+# Copy test resources
+COPY --from=builder /app/test /app/test
 # Copy the application source
 COPY --from=builder /app/src /app/src
 

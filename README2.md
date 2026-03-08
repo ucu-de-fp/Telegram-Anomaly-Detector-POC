@@ -15,3 +15,8 @@ set +a
 
 PYTHONPATH=src poetry run python -m telegram_ingestion.main
 ```
+
+## Запуск всього
+```bash
+APP_ENV=dev docker compose --profile infra --profile app --parallel 8 up --build
+```
