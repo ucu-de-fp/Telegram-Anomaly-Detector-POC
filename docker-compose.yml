@@ -82,29 +82,6 @@ services:
     networks:
       - monitoring-network
 
-  # telegram-ingestion-service:
-  #   build:
-  #     context: ./telegram-ingestion-service
-  #     dockerfile: Dockerfile
-  #   container_name: telegram-ingestion-service
-  #   environment:
-  #     SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/admin
-  #     SPRING_R2DBC_USERNAME: monitoring
-  #     SPRING_R2DBC_PASSWORD: monitoring123
-  #     SPRING_RABBITMQ_HOST: rabbitmq
-  #     SPRING_RABBITMQ_PORT: 5672
-  #     SPRING_RABBITMQ_USERNAME: monitoring
-  #     SPRING_RABBITMQ_PASSWORD: monitoring123
-  #   ports:
-  #     - "8083:8083"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     rabbitmq:
-  #       condition: service_healthy
-  #   networks:
-  #     - monitoring-network
-
   telegram-ingestion-telethon:
     profiles: ["app"]
     build:
@@ -116,35 +93,6 @@ services:
       - "8083:8080"    # cache-management HTTP API (avoid clash with other services)
     env_file:
       - ./telegram-ingestion-service-telethon/.env.${APP_ENV:-example}
-    # environment:
-    #   # ── Profiles (no "test" → live Telegram mode) ──
-    #   PROFILES: "${PROFILES}"
-
-    #   # ── Telegram credentials (required in live mode) ──
-    #   TELEGRAM_API_ID: "${TELEGRAM_API_ID}"
-    #   TELEGRAM_API_HASH: "${TELEGRAM_API_HASH}"
-    #   TELEGRAM_SESSION_NAME: "/app/session/telegram_session"
-
-    #   # ── PostgreSQL (matches Spring R2DBC vars) ──
-    #   DB_HOST: postgres
-    #   DB_PORT: 5432
-    #   DB_NAME: admin
-    #   DB_USER: monitoring
-    #   DB_PASSWORD: monitoring123
-
-    #   # ── RabbitMQ ──
-    #   RABBITMQ_HOST: rabbitmq
-    #   RABBITMQ_PORT: 5672
-    #   RABBITMQ_USERNAME: monitoring
-    #   RABBITMQ_PASSWORD: monitoring123
-    #   RABBITMQ_EXCHANGE: telegram.messages
-    #   RABBITMQ_ROUTING_KEY: telegram.message.ingested
-
-    #   # ── HTTP API ──
-    #   HTTP_HOST: "0.0.0.0"
-    #   HTTP_PORT: 8080
-
-    #   LOG_LEVEL: INFO
 
     volumes:
       # Persist the Telethon session across container restarts.

@@ -62,16 +62,12 @@ logger = logging.getLogger(__name__)
 async def run_message_pipeline(settings, exchange) -> None:
     """
     Core message pipeline: source → filter → publish.
-
-    Selects the appropriate source based on the current PROFILES setting,
-    then processes each yielded message through the pure filter and (if it
-    passes) publishes it via IO.
     """
-    if settings.is_test_mode:
+    if settings.message_source == "FILE":
         from .source.file_source import message_stream_from_file
         source = message_stream_from_file(settings.test_messages_file)
         logger.info("[TEST MODE] Using file-based message source")
-    else:
+    elif settings.message_source == "TELEGRAM":
         from .source.telegram_source import message_stream_from_telegram
         current_cache = get_cache()
         group_ids: frozenset[str] = (
@@ -81,6 +77,10 @@ async def run_message_pipeline(settings, exchange) -> None:
         logger.info(f'Listening to groups with ids: {group_ids}')
         source = message_stream_from_telegram(settings, group_ids)
         logger.info("[LIVE MODE] Using Telethon message source")
+    else:
+        from .source.random_messages_source import message_stream_random
+        source = message_stream_random(settings)
+        logger.info("[TEST MODE] Using randomized message source")
 
     published = 0
     filtered = 0
@@ -139,8 +139,7 @@ async def main() -> None:
     logger.info(
         "═══════════════════════════════════════════════════════════\n"
         "  telegram-ingestion-service-telethon  starting up\n"
-        f"  mode    : {'TEST (file replay)' if settings.is_test_mode else 'LIVE (Telegram)'}\n"
-        f"  profiles: {settings.profiles or '(none)'}\n"
+        f"  message source: {settings.message_source}\n"
         "═══════════════════════════════════════════════════════════"
     )
 

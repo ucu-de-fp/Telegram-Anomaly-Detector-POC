@@ -1,5 +1,5 @@
 """
-File-based message source — used when PROFILES contains "test".
+File-based message source — used when MESSAGE_SOURCE is FILE.
 
 ─────────────────────────────────────────────────────────────────────────────
 SOURCE FORMAT

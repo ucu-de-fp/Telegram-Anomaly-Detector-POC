@@ -24,12 +24,10 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    # ── Profiles ──────────────────────────────────────────────────────────────
-    # If the value contains the word "test" the service reads from a local file
-    # instead of live Telegram.  Example values: "test", "dev,test", "prod".
-    profiles: str = Field(default="", alias="PROFILES")
+    # Values: TELEGRAM, RANDOM_MESSAGES, FILE
+    message_source: str = Field(default="RANDOM_MESSAGES", alias="MESSAGE_SOURCE")
 
-    # ── Telegram (required only when PROFILES does NOT contain "test") ────────
+    # ── Telegram (only needed when MESSAGE_SOURCE=TELEGRAM) ────────────────────
     telegram_api_id: int = Field(default=0, alias="TELEGRAM_API_ID")
     telegram_api_hash: str = Field(default="", alias="TELEGRAM_API_HASH")
     # Path (without extension) for the Telethon session file
@@ -42,6 +40,14 @@ class Settings(BaseSettings):
     test_messages_file: str = Field(
         default="test_data/result.json", alias="TEST_MESSAGES_FILE"
     )
+
+    # ── Test-mode random message source config ─────────────────────────────────────────────────
+    random_source_config: str = Field(
+        default="", 
+        alias="RANDOM_SOURCE_CONFIG"
+    )
+    random_source_interval_seconds: float = Field(default="5.0", alias="RANDOM_SOURCE_INTERVAL_SECONDS")
+    random_source_jitter: float = Field(default="0.2", alias="RANDOM_SOURCE_JITTER")
 
     # ── PostgreSQL (read-only; mirrors the Spring R2DBC vars) ─────────────────
     db_host: str = Field(default="postgres", alias="DB_HOST")
@@ -68,11 +74,6 @@ class Settings(BaseSettings):
     http_port: int = Field(default=8080, alias="HTTP_PORT")
 
     # ── Derived properties (pure, no IO) ──────────────────────────────────────
-
-    @property
-    def is_test_mode(self) -> bool:
-        """Return True when PROFILES contains the literal word 'test'."""
-        return "test" in {p.strip().lower() for p in self.profiles.split(",")}
 
     @property
     def db_dsn(self) -> str:
