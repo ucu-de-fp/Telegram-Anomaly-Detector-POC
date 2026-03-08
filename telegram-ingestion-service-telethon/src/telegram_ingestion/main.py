@@ -153,6 +153,10 @@ async def main() -> None:
     # _, exchange = await create_exchange(amqp_conn, settings.rabbitmq_exchange)
     channel = await amqp_conn.channel()
     exchange = channel.default_exchange
+    queue = await channel.declare_queue(
+        settings.rabbitmq_routing_key,
+        durable=True
+    )
 
     # ── Load initial cache from DB ────────────────────────────────────────────
     logger.info("Loading initial cache from database …")

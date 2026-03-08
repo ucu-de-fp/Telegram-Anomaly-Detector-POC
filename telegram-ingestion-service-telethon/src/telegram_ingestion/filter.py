@@ -16,8 +16,11 @@ using Python's built-in filter() (a higher-order function).
 """
 from __future__ import annotations
 
+import logging
+
 from .models import CacheState, TelegramMessage
 
+logger = logging.getLogger(__name__)
 
 def should_publish(message: TelegramMessage, cache: CacheState) -> bool:
     """

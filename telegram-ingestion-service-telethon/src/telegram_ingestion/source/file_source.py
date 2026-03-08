@@ -108,7 +108,7 @@ def parse_messages_from_export(data: dict[str, Any]) -> tuple[TelegramMessage, .
     filtered out.
     """
     # The top-level "id" is the Telegram chat ID for this export.
-    group_id = str(data.get("id", "unknown"))
+    group_id = int(data["id"])
 
     return tuple(
         TelegramMessage(

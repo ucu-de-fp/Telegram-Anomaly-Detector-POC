@@ -60,7 +60,7 @@ class TelegramMessage:
     """
 
     message_id: int
-    group_telegram_id: str          # matches TelegramGroup.telegram_group_id
+    group_telegram_id: int
     text: str
     timestamp: datetime
     sender_id: str | None
