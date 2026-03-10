@@ -3,28 +3,76 @@ import { MapContainer, TileLayer, Rectangle, useMapEvents } from 'react-leaflet'
 import { zoneAPI } from '../services/api';
 import './PipelineManagement.css';
 
-const ZoneSelector = ({ bounds, setBounds }) => {
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [startPoint, setStartPoint] = useState(null);
+const ZERO_AREA_EPSILON = 1e-7;
 
-  useMapEvents({
+const ZoneSelector = ({ setBounds }) => {
+  const selectionRef = useRef({
+    isSelecting: false,
+    startPoint: null,
+  });
+
+  const map = useMapEvents({
     mousedown: (e) => {
-      setIsSelecting(true);
-      setStartPoint(e.latlng);
+      if (e.originalEvent?.button !== 0) {
+        return;
+      }
+
+      selectionRef.current.isSelecting = true;
+      selectionRef.current.startPoint = e.latlng;
+      map.dragging.disable();
     },
     mousemove: (e) => {
-      if (isSelecting && startPoint) {
+      const { isSelecting, startPoint } = selectionRef.current;
+      if (!isSelecting || !startPoint) {
+        return;
+      }
+
+      setBounds([
+        [Math.min(startPoint.lat, e.latlng.lat), Math.min(startPoint.lng, e.latlng.lng)],
+        [Math.max(startPoint.lat, e.latlng.lat), Math.max(startPoint.lng, e.latlng.lng)],
+      ]);
+    },
+    mouseup: (e) => {
+      const { isSelecting, startPoint } = selectionRef.current;
+      if (!isSelecting || !startPoint) {
+        return;
+      }
+
+      const endPoint = e.latlng || startPoint;
+      const hasArea =
+        Math.abs(startPoint.lat - endPoint.lat) > ZERO_AREA_EPSILON &&
+        Math.abs(startPoint.lng - endPoint.lng) > ZERO_AREA_EPSILON;
+
+      if (hasArea) {
         setBounds([
-          [Math.min(startPoint.lat, e.latlng.lat), Math.min(startPoint.lng, e.latlng.lng)],
-          [Math.max(startPoint.lat, e.latlng.lat), Math.max(startPoint.lng, e.latlng.lng)]
+          [Math.min(startPoint.lat, endPoint.lat), Math.min(startPoint.lng, endPoint.lng)],
+          [Math.max(startPoint.lat, endPoint.lat), Math.max(startPoint.lng, endPoint.lng)],
         ]);
       }
-    },
-    mouseup: () => {
-      setIsSelecting(false);
-      setStartPoint(null);
+
+      selectionRef.current.isSelecting = false;
+      selectionRef.current.startPoint = null;
+      map.dragging.enable();
     },
   });
+
+  useEffect(() => {
+    const handleWindowMouseUp = () => {
+      if (!selectionRef.current.isSelecting) {
+        return;
+      }
+
+      selectionRef.current.isSelecting = false;
+      selectionRef.current.startPoint = null;
+      map.dragging.enable();
+    };
+
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+      map.dragging.enable();
+    };
+  }, [map]);
 
   return null;
 };
@@ -107,10 +155,11 @@ const PipelineManagement = () => {
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
-        <ZoneSelector bounds={bounds} setBounds={setBounds} />
+        <ZoneSelector setBounds={setBounds} />
         {bounds && (
           <Rectangle
             bounds={bounds}
+            interactive={false}
             pathOptions={{ color: '#4CAF50', weight: 2 }}
           />
         )}
