@@ -14,7 +14,7 @@ server:
 detection:
   source-queue: telegram-events
   target-queue: anomaly-notifications
-  keywords: warning,alert,urgent
+#  keywords: warning,alert,urgent
 
 logging:
   level:
