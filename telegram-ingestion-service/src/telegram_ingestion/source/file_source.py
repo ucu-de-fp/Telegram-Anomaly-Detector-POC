@@ -62,7 +62,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ..models import TelegramMessage
+from ..models import TelegramMessage, TelegramGroup
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ def parse_messages_from_export(data: dict[str, Any]) -> tuple[TelegramMessage, .
     return tuple(
         TelegramMessage(
             message_id=msg["id"],
-            group_telegram_id=group_id,
+            group = TelegramGroup(telegram_id=group_id),
             text=_extract_text(msg.get("text", "")),
             timestamp=_parse_date(msg["date"]),
             sender_id=str(msg.get("from_id", "")) or None,
@@ -222,7 +222,7 @@ async def message_stream_from_file(
 
         logger.info(
             f"[TEST MODE] ▶  emitting msg_id={message.message_id} "
-            f"group={message.group_telegram_id} "
+            f"group={message.group.telegram_id} "
             f"t+{delay_seconds:.1f}s"
         )
         yield message

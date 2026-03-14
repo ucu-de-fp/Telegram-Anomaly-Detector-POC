@@ -73,7 +73,7 @@ async def fetch_telegram_groups(
     groups = tuple(
         TelegramGroup(
             id=row["id"],
-            telegram_group_id=row["telegram_group_id"],
+            telegram_id=row["telegram_group_id"],
             polygon_wkt=row["polygon_wkt"],
         )
         for row in rows

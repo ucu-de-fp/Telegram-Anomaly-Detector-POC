@@ -25,7 +25,7 @@ import logging
 import asyncpg
 
 from .database import fetch_telegram_groups, fetch_zones_of_interest
-from .geometry import compute_publishable_group_ids
+from .geometry import compute_publishable_group_ids, get_group_id_mapping # TODO: перенести з geometry
 from .models import CacheState
 
 logger = logging.getLogger(__name__)
@@ -53,6 +53,7 @@ async def _build_cache(pool: asyncpg.Pool) -> CacheState:
     groups = await fetch_telegram_groups(pool)
     zones = await fetch_zones_of_interest(pool)
     publishable_ids = compute_publishable_group_ids(groups, zones)
+    group_id_mapping = get_group_id_mapping(groups)
 
     logger.info(
         f"Cache built: {len(groups)} groups | groups: {groups} | {len(zones)} zones | "
@@ -62,6 +63,7 @@ async def _build_cache(pool: asyncpg.Pool) -> CacheState:
         groups=groups,
         zones=zones,
         publishable_group_ids=publishable_ids,
+        group_id_mapping = group_id_mapping
     )
 
 
@@ -89,11 +91,14 @@ async def reset_groups_cache(pool: asyncpg.Pool) -> CacheState:
     groups = await fetch_telegram_groups(pool)
     zones = existing.zones if existing else ()
     publishable_ids = compute_publishable_group_ids(groups, zones)
+    group_id_mapping = get_group_id_mapping(groups)
+    logger.info(f'Group id mapping: {group_id_mapping}')
 
     new_cache = CacheState(
         groups=groups,
         zones=zones,
         publishable_group_ids=publishable_ids,
+        group_id_mapping = group_id_mapping
     )
     async with _lock:
         _current_cache = new_cache
@@ -115,11 +120,13 @@ async def reset_zones_cache(pool: asyncpg.Pool) -> CacheState:
     groups = existing.groups if existing else ()
     zones = await fetch_zones_of_interest(pool)
     publishable_ids = compute_publishable_group_ids(groups, zones)
+    group_id_mapping = get_group_id_mapping(groups)
 
     new_cache = CacheState(
         groups=groups,
         zones=zones,
         publishable_group_ids=publishable_ids,
+        group_id_mapping = group_id_mapping
     )
     async with _lock:
         _current_cache = new_cache

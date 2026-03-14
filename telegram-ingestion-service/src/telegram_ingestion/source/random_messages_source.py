@@ -67,7 +67,7 @@ try:
 except ModuleNotFoundError:
     import tomli as tomllib  # pip install tomli for 3.10 and below  # type: ignore[no-redef]
 
-from ..models import TelegramMessage
+from ..models import TelegramMessage, TelegramGroup
 
 logger = logging.getLogger(__name__)
 
@@ -206,7 +206,7 @@ def _make_random_message(
 
     return TelegramMessage(
         message_id=message_id,
-        group_telegram_id=group.id,
+        group=TelegramGroup(id=None, telegram_id=group.id, polygon_wkt=None),
         text=text,
         timestamp=datetime.now(tz=timezone.utc),
         sender_id=sender.id,
@@ -271,7 +271,7 @@ async def message_stream_random(
         logger.info(
             "[RANDOM MODE] ▶  emitting msg_id=%d  group=%d  sender=%s",
             message.message_id,
-            message.group_telegram_id,
+            message.group.telegram_id,
             message.sender_name or message.sender_id,
         )
         yield message

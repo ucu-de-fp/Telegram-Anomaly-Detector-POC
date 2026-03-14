@@ -22,7 +22,8 @@ from datetime import datetime
 from typing import Any
 
 
-@dataclass(frozen=True)
+# @dataclass(frozen=True)
+@dataclass # TODO: return frozen=True
 class TelegramGroup:
     """
     A Telegram group/channel tracked by the system.
@@ -32,7 +33,7 @@ class TelegramGroup:
     """
 
     id: int
-    telegram_group_id: str
+    telegram_id: str
     polygon_wkt: str
 
 
@@ -60,12 +61,13 @@ class TelegramMessage:
     """
 
     message_id: int
-    group_telegram_id: int
+    group: TelegramGroup
+    # group_telegram_id: int
     text: str
     timestamp: datetime
     sender_id: str | None
     sender_name: str | None
-    raw: dict[str, Any]             # original payload for downstream consumers
+    raw: dict[str, Any]
 
 
 @dataclass(frozen=True)
@@ -89,3 +91,4 @@ class CacheState:
     zones: tuple[ZoneOfInterest, ...]
     # Pre-computed result of geometry.compute_publishable_group_ids()
     publishable_group_ids: frozenset[str]
+    group_id_mapping: dict[str, int]

@@ -32,7 +32,7 @@ def should_publish(message: TelegramMessage, cache: CacheState) -> bool:
     Complexity: O(1) — the set lookup is constant time regardless of how
     many groups or zones exist.
     """
-    return message.group_telegram_id in cache.publishable_group_ids
+    return message.group.telegram_id in cache.publishable_group_ids
 
 
 def filter_messages(

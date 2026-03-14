@@ -71,7 +71,7 @@ async def run_message_pipeline(settings, exchange) -> None:
         from .source.telegram_source import message_stream_from_telegram
         current_cache = get_cache()
         group_ids: frozenset[str] = (
-            frozenset(g.telegram_group_id for g in current_cache.groups)
+            frozenset(g.telegram_id for g in current_cache.groups)
             if current_cache else frozenset()
         )
         logger.info(f'Listening to groups with ids: {group_ids}')
@@ -92,19 +92,35 @@ async def run_message_pipeline(settings, exchange) -> None:
             logger.warning("Cache not loaded yet — skipping message")
             continue
 
+        group_id = cache.group_id_mapping.get(message.group.telegram_id)
+        if group_id is None:
+            logger.warning(
+                "Unknown telegram group id %s (no mapping in cache) - skipping",
+                message.group.telegram_id,
+            )
+            filtered += 1
+            continue
+
+        message.group.id = group_id
+        logger.info(
+            "Found internal group id %s by telegram group id %s",
+            message.group.id,
+            message.group.telegram_id,
+        )
+
         if should_publish(message, cache):
             await publish_message(exchange, settings.rabbitmq_routing_key, message)
             published += 1
             logger.info(
                 f"✓ PUBLISHED  msg_id={message.message_id} "
-                f"group={message.group_telegram_id} "
+                f"group={message.group.telegram_id} "
                 f'text="{message.text[:60]}"'
             )
         else:
             filtered += 1
             logger.info(
                 f"✗ filtered   msg_id={message.message_id} "
-                f"group={message.group_telegram_id} (not in any active zone)"
+                f"group={message.group.telegram_id} (not in any active zone)"
             )
 
     # Reached only in test mode (file source exhausted)

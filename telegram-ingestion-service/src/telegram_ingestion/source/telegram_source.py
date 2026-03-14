@@ -45,7 +45,7 @@ from telethon import TelegramClient, events
 from telethon.tl.types import Message as TLMessage
 
 from ..config import Settings
-from ..models import TelegramMessage
+from ..models import TelegramMessage, TelegramGroup
 
 logger = logging.getLogger(__name__)
 
@@ -74,11 +74,11 @@ def _telethon_event_to_domain(
     msg: TLMessage = event.message
     return TelegramMessage(
         message_id=msg.id,
-        group_telegram_id=matched_group_id,
+        group=TelegramGroup(telegram_id=matched_group_id),
         text=msg.text or "",
         timestamp=msg.date,
         sender_id=str(msg.sender_id) if msg.sender_id else None,
-        sender_name=None,       # resolving display names requires extra API calls
+        sender_name=None,
         raw=msg.to_dict(),
     )
 

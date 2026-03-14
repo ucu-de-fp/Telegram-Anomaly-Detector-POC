@@ -45,7 +45,7 @@ def serialise_message(message: TelegramMessage) -> bytes:
     #     "sender_name": message.sender_name,
     # }
     payload: dict = {
-        "groupId": message.group_telegram_id,
+        "groupId": message.group.id,
         "content": message.text,
         "timestamp": message.timestamp.replace(tzinfo=None).isoformat()
     }
@@ -125,5 +125,5 @@ async def publish_message(
     await exchange.publish(amqp_msg, routing_key=routing_key)
     logger.info(
         f"→ RabbitMQ [{routing_key}] "
-        f"msg_id={message.message_id} group={message.group_telegram_id}"
+        f"msg_id={message.message_id} group={message.group.telegram_id}"
     )

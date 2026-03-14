@@ -86,7 +86,12 @@ def compute_publishable_group_ids(
     ─────────────────────────────────────────────────────────────────────────
     """
     return frozenset(
-        group.telegram_group_id
+        group.telegram_id
         for group in groups
         if group_intersects_any_active_zone(group, zones)
     )
+
+def get_group_id_mapping(
+    groups: tuple[TelegramGroup, ...]
+) -> dict[str, int]:
+    return {group.telegram_id: group.id for group in groups}
