@@ -5,13 +5,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.json.JsonMapper;
+import ua.edu.ucu.de.fp.monitoring.anomaly.config.AnomalyRuleConfig;
 import ua.edu.ucu.de.fp.monitoring.anomaly.model.TelegramEvent;
+import ua.edu.ucu.de.fp.monitoring.anomaly.rule.AnomalyRule;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -27,7 +29,16 @@ class AnomalyDetectionServiceTest {
     void setUp() {
         rabbitTemplate = mock(RabbitTemplate.class);
         jsonMapper = JsonMapper.builder().findAndAddModules().build();
-        service = new AnomalyDetectionService(rabbitTemplate, jsonMapper);
+        AnomalyRuleConfig config = new AnomalyRuleConfig();
+        ReflectionTestUtils.setField(config, "enabledRuleNames", List.of(
+                "Будь-яке",
+                "Будь-яке у групах",
+                "Термінові новини",
+                "Ріст активності",
+                "Комбіноване"
+        ));
+        List<AnomalyRule> anomalyRules = config.anomalyRules();
+        service = new AnomalyDetectionService(rabbitTemplate, jsonMapper, anomalyRules);
         service.setTargetQueue(QUEUE);
         service.clearHistory();
     }

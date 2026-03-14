@@ -1,9 +1,11 @@
 package ua.edu.ucu.de.fp.monitoring.anomaly.service;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 import lombok.Setter;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -17,7 +19,6 @@ import tools.jackson.databind.json.JsonMapper;
 import ua.edu.ucu.de.fp.monitoring.anomaly.model.AnomalyNotification;
 import ua.edu.ucu.de.fp.monitoring.anomaly.model.TelegramEvent;
 import ua.edu.ucu.de.fp.monitoring.anomaly.rule.AnomalyRule;
-import ua.edu.ucu.de.fp.monitoring.anomaly.rule.impl.KeywordsAnomalyRule;
 
 /**
  * Functional reactive anomaly detection service.
@@ -30,46 +31,12 @@ public class AnomalyDetectionService {
 
     private final RabbitTemplate rabbitTemplate;
     private final JsonMapper jsonMapper;
+    private final List<AnomalyRule> anomalyRules;
+    private final Map<String, List<TelegramEvent>> ruleHistories = new ConcurrentHashMap<>();
 
     @Value("${detection.target-queue}")
     @Setter
     private String targetQueue;
-
-    // Реєстр правил
-    private final List<AnomalyRule> anomalyRules = List.of(
-            KeywordsAnomalyRule.builder()
-                    .name("Будь-яке")
-                    .description("Спрацьовує на будь яке повідомлення")
-                    .build(),
-            KeywordsAnomalyRule.builder()
-                    .name("Будь-яке у групах")
-                    .description("Спрацьовує на будь яке повідомлення у групах [1] та [2]")
-                    .filterCondition(groupIdIn(1L, 2L))
-                    .build(),
-            KeywordsAnomalyRule.builder()
-                    .name("Термінові новини")
-                    .description("Спрацьовує коли у повідомлені слово \"warning\", або \"news\" та \"breaking\".")
-                    .filterCondition(contains("warning").or(containsAll("news", "breaking")))
-                    .build(),
-            KeywordsAnomalyRule.builder()
-                    .name("Ріст активності")
-                    .description("Спрацьовує коли кількість повідомлень у групі зростає більш ніж на 20 відсотків за 10 сек.")
-                    .windowTimeSeconds(10)
-                    .historyTimeSeconds(50)
-                    .anomalyCondition(numberIncreaseMoreThen(calculateCoefficient(10, 50, 0.2f)))
-                    .build(),
-            KeywordsAnomalyRule.builder()
-                    .name("Комбіноване")
-                    .description("Спрацьовує коли кількість повідомлень зі словом \"ufo\" у групі [3] зростає більш ніж на 10 відсотків за 5 сек.")
-                    .windowTimeSeconds(5)
-                    .historyTimeSeconds(60)
-                    .filterCondition(groupIdIn(3L).and(containsAny("ufo")))
-                    .anomalyCondition(numberIncreaseMoreThen(calculateCoefficient(5, 60, 0.1f)))
-                    .build()
-    );
-
-    // Сховище історії: Rule Name -> List of events
-    private final Map<String, List<TelegramEvent>> ruleHistories = new ConcurrentHashMap<>();
 
     public void clearHistory() {
         ruleHistories.clear();
@@ -81,10 +48,8 @@ public class AnomalyDetectionService {
             TelegramEvent event = jsonMapper.readValue(message, TelegramEvent.class);
 
             anomalyRules.forEach(rule -> {
-                // 1. Отримуємо та оновлюємо вікно подій для конкретного правила
                 AnomalyRule.Events events = updateHistoryAndGetWindowEvents(rule, event);
 
-                // 2. Детекція (Functional Pipeline)
                 Optional.of(events)
                         .map(rule.detectAnomalyFunction()) // Шукаємо аномалії
                         .stream()
@@ -106,9 +71,9 @@ public class AnomalyDetectionService {
         LocalDateTime historyThreshold = windowThreshold.minusSeconds(rule.getHistoryTimeSeconds());
 
         List<TelegramEvent> updatedHistory = ruleHistories.compute(rule.getName(), (key, history) -> {
-            // Створюємо новий список (immutable-style approach)
-            List<TelegramEvent> temporaryHistory = (history == null) ? new java.util.ArrayList<>() : new java.util.ArrayList<>(history);
-
+            List<TelegramEvent> temporaryHistory = (history == null)
+                    ? new java.util.ArrayList<>()
+                    : new java.util.ArrayList<>(history);
             if (rule.getFilterCondition().test(newEvent)) {
                 temporaryHistory.add(newEvent);
             }
@@ -139,37 +104,5 @@ public class AnomalyDetectionService {
                         return Optional.empty();
                     }
                 });
-    }
-
-    Predicate<TelegramEvent> contains(String word) {
-        return e -> e.content().toLowerCase().contains(word.toLowerCase());
-    }
-
-    Predicate<TelegramEvent> containsAny(String ... words) {
-        return Arrays.stream(words)
-                .map(word -> (Predicate<TelegramEvent>) e -> e.content().contains(word))
-                .reduce(s -> false, Predicate::or);
-    }
-
-    Predicate<TelegramEvent> containsAll(String ... words) {
-        return Arrays.stream(words)
-                .map(word -> (Predicate<TelegramEvent>) e -> e.content().contains(word))
-                .reduce(s -> true, Predicate::and);
-    }
-
-    Predicate<TelegramEvent> groupIdIn(Long ... groupIds) {
-        return Arrays.stream(groupIds)
-                .map(groupId -> (Predicate<TelegramEvent>) e -> e.groupId().equals(groupId))
-                .reduce(s -> false, Predicate::or);
-    }
-
-    Predicate<AnomalyRule.Events> numberIncreaseMoreThen(float coefficient) {
-        return events ->
-                !events.historyEvents().isEmpty() && // Додаємо цю перевірку
-                        events.windowEvents().size() > events.historyEvents().size() * coefficient;
-    }
-
-    private float calculateCoefficient(int windowSize, int historySize, float percentages) {
-        return ((float) windowSize / historySize) * (1 + percentages);
     }
 }
