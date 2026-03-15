@@ -1,7 +1,7 @@
 """
 HTTP API — cache management endpoints.
 
-Provides a small REST API so the front-end (or operators) can force-reload
+Provides a small REST API so the front-end can force-reload
 groups and zones of interest without restarting the service.
 
 Endpoints:
@@ -11,15 +11,6 @@ Endpoints:
   POST /cache/reset/groups  — reload only telegram_groups
   POST /cache/reset/zones   — reload only zone_of_interest
 
-─────────────────────────────────────────────────────────────────────────────
-FUNCTIONAL PROGRAMMING NOTE
-─────────────────────────────────────────────────────────────────────────────
-HTTP handlers are *impure* by definition (they perform IO).  We keep them
-thin: each handler simply calls a function from the cache module (which
-manages all state) and converts the result to a plain dict (JSON response).
-
-The DB pool is injected via app.state rather than a global variable, keeping
-the dependency explicit.
 ─────────────────────────────────────────────────────────────────────────────
 """
 from __future__ import annotations
@@ -43,7 +34,6 @@ app = FastAPI(
     ),
 )
 
-# Allow the front-end to call these endpoints from the browser
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -60,11 +50,9 @@ def _require_pool(request: Request) -> asyncpg.Pool:
     return pool
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
-
 @app.get("/health", tags=["ops"])
 async def health_check() -> dict:
-    """Kubernetes / Docker liveness probe."""
+    """Liveness endpoint."""
     cache = cache_module.get_cache()
     return {
         "status": "ok",
@@ -74,7 +62,7 @@ async def health_check() -> dict:
 
 @app.get("/cache/status", tags=["cache"])
 async def cache_status() -> dict:
-    """Return current cache statistics — no DB access."""
+    """Return current cache statistics"""
     cache = cache_module.get_cache()
     if cache is None:
         return {"status": "not_loaded"}
@@ -91,10 +79,7 @@ async def cache_status() -> dict:
 @app.post("/cache/reset", tags=["cache"])
 async def reset_all_caches(request: Request) -> dict:
     """
-    Reload telegram_groups AND zone_of_interest from the database,
-    then recompute the publishable-group set.
-
-    Call this after any bulk change to either table.
+    Reload data from the database, then recompute the cached state.
     """
     pool = _require_pool(request)
     new_cache = await cache_module.refresh_cache(pool)
@@ -112,8 +97,6 @@ async def reset_all_caches(request: Request) -> dict:
 async def reset_groups(request: Request) -> dict:
     """
     Reload only telegram_groups, recompute filter set against existing zones.
-
-    Use this after adding / removing a Telegram group.
     """
     pool = _require_pool(request)
     new_cache = await cache_module.reset_groups_cache(pool)
@@ -129,8 +112,6 @@ async def reset_groups(request: Request) -> dict:
 async def reset_zones(request: Request) -> dict:
     """
     Reload only zone_of_interest, recompute filter set against existing groups.
-
-    Use this after enabling / disabling a zone or changing its polygon.
     """
     pool = _require_pool(request)
     new_cache = await cache_module.reset_zones_cache(pool)

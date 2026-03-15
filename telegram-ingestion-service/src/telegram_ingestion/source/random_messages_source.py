@@ -1,5 +1,5 @@
 """
-Random-message test source — used when MESSAGE_SOURCE is RANDOM_MESSAGES.
+Random-message test source — used when MESSAGE_SOURCE is set to "RANDOM_MESSAGES".
 
 ─────────────────────────────────────────────────────────────────────────────
 SOURCE FORMAT  (random_messages.toml)
@@ -17,37 +17,14 @@ A TOML file with three arrays of tables:
   [[messages]]        # Pool of message bodies to draw from
   text = "Hello!"     # required  (plain string — safe to embed JSON/quotes)
 
-  # Multi-line bodies are fine in TOML:
-  # text = '''
-  # {"key": "value"}   ← telegram-style JSON content won't break anything
-  # '''
-
 ─────────────────────────────────────────────────────────────────────────────
 CONFIGURATION (environment variables)
 ─────────────────────────────────────────────────────────────────────────────
   RANDOM_SOURCE_CONFIG   path to the TOML file
-                         default: random_messages.toml  (next to this file)
 
-  RANDOM_SOURCE_INTERVAL_SECONDS
-                         mean seconds between emitted messages (float > 0)
-                         default: 5.0
+  RANDOM_SOURCE_INTERVAL_SECONDS    mean seconds between emitted messages (float > 0)
 
   RANDOM_SOURCE_JITTER   fraction of interval to add random ±jitter (0–1)
-                         e.g. 0.3 → actual delay ∈ [0.7×interval, 1.3×interval]
-                         default: 0.2
-
-─────────────────────────────────────────────────────────────────────────────
-FUNCTIONAL PROGRAMMING NOTE
-─────────────────────────────────────────────────────────────────────────────
-Pure layer:
-  raw TOML  →  load_random_config()  →  RandomSourceConfig (frozen dataclass)
-
-IO layer:
-  message_stream_random()  →  AsyncIterator[TelegramMessage]
-    draws samples with random.choice(), sleeps, then yields.
-
-Only the async generator performs IO (asyncio.sleep + yield).
-─────────────────────────────────────────────────────────────────────────────
 """
 from __future__ import annotations
 

@@ -1,56 +1,19 @@
 """
-File-based message source — used when MESSAGE_SOURCE is FILE.
+File-based message source — used when MESSAGE_SOURCE is set to "FILE".
 
-─────────────────────────────────────────────────────────────────────────────
-SOURCE FORMAT
-─────────────────────────────────────────────────────────────────────────────
-Telegram Desktop → Settings → Export Telegram Data → Machine-readable JSON.
-The root object looks like:
-
-  {
-    "name": "My Group",
-    "type": "public_supergroup",
-    "id": 1234567890,
-    "messages": [
-      {
-        "id": 1,
-        "type": "message",
-        "date": "2024-03-01T12:00:00",
-        "date_unixtime": "1709294400",
-        "from": "Alice",
-        "from_id": "user123",
-        "text": "Hello world"   // may also be a list of text-entity objects
-      },
-      ...
-    ]
-  }
+Source file can be created by exporting the chat history from telegram:
+Telegram Desktop -> Settings -> Export Telegram Data -> Machine-readable JSON.
 
 ─────────────────────────────────────────────────────────────────────────────
 TIME-ZERO REPLAY ALGORITHM
 ─────────────────────────────────────────────────────────────────────────────
+The algorithm reproduces the relative timing of the original conversation.
+
 1. Parse all messages and sort them chronologically.
 2. The earliest message becomes "time zero" (delay = 0 s).
 3. Every subsequent message gets delay = (its_timestamp - time_zero) seconds.
 4. At service startup we record the wall-clock start time.
 5. Before yielding each message we sleep until (start + delay) is reached.
-
-This faithfully reproduces the *relative* timing of the original conversation.
-
-─────────────────────────────────────────────────────────────────────────────
-FUNCTIONAL PROGRAMMING NOTE
-─────────────────────────────────────────────────────────────────────────────
-The parsing pipeline is a sequence of pure transformations:
-
-  raw JSON  →  parse_messages_from_export()  →  tuple[TelegramMessage, ...]
-                                                          ↓
-                                          sort_by_timestamp()
-                                                          ↓
-                                          compute_replay_schedule()
-                                                          ↓
-                                     tuple[(delay_seconds, TelegramMessage), ...]
-
-Only the final async generator performs IO (asyncio.sleep + yield).
-─────────────────────────────────────────────────────────────────────────────
 """
 from __future__ import annotations
 
@@ -67,13 +30,11 @@ from ..models import TelegramMessage, TelegramGroup
 logger = logging.getLogger(__name__)
 
 
-# ── Pure parsing helpers ──────────────────────────────────────────────────────
-
+# TODO: telegram sends the "date" field as a local datetime of the user. 
+# This function assumes it's in UTC.
 def _parse_date(date_str: str) -> datetime:
     """
-    Pure function: parse an ISO 8601 string to a timezone-aware datetime.
-
-    Telegram Desktop omits the timezone offset; we assume UTC.
+    Parses an ISO 8601 string to a timezone-aware datetime.
     """
     dt = datetime.fromisoformat(date_str)
     if dt.tzinfo is None:
@@ -86,8 +47,8 @@ def _extract_text(text_field: Any) -> str:
     Pure function: flatten the Telegram text field to a plain string.
 
     The field can be:
-      • a plain str  → return as-is
-      • a list of mixed str / entity-dicts  → concatenate the .text values
+      • a plain str -> return as-is
+      • a list of mixed str / entity-dicts -> concatenate the .text values
     """
     if isinstance(text_field, str):
         return text_field
@@ -101,13 +62,12 @@ def _extract_text(text_field: Any) -> str:
 
 def parse_messages_from_export(data: dict[str, Any]) -> tuple[TelegramMessage, ...]:
     """
-    Pure function: convert a Telegram Desktop export dict to an immutable
+    Convert a Telegram Desktop export dict to an immutable
     tuple of TelegramMessage objects.
 
     Service messages (type != "message") and entries without a date are
     filtered out.
     """
-    # The top-level "id" is the Telegram chat ID for this export.
     group_id = int(data["id"])
 
     return tuple(
@@ -128,7 +88,7 @@ def parse_messages_from_export(data: dict[str, Any]) -> tuple[TelegramMessage, .
 def sort_by_timestamp(
     messages: tuple[TelegramMessage, ...],
 ) -> tuple[TelegramMessage, ...]:
-    """Pure function: return messages in chronological order."""
+    """Return messages in chronological order."""
     return tuple(sorted(messages, key=lambda m: m.timestamp))
 
 
@@ -136,24 +96,16 @@ def compute_replay_schedule(
     messages: tuple[TelegramMessage, ...],
 ) -> tuple[tuple[float, TelegramMessage], ...]:
     """
-    Pure function: pair each message with its replay delay in seconds.
+    Pair each message with its replay delay in seconds.
 
-    The earliest message has delay=0 (it IS the time-zero reference).
+    The earliest message has delay=0 (it is the time-zero reference).
     All others have delay = (timestamp - time_zero).total_seconds().
-
-    ─────────────────────────────────────────────────────────────────────────
-    FUNCTIONAL PROGRAMMING NOTE
-    ─────────────────────────────────────────────────────────────────────────
-    This is a *fold* pattern (reduce):  we scan the sorted list once to
-    extract the minimum timestamp, then map each message to its offset.
-    Python's built-in min() and a generator expression avoid explicit loops.
-    ─────────────────────────────────────────────────────────────────────────
     """
     if not messages:
         return ()
 
     sorted_msgs = sort_by_timestamp(messages)
-    time_zero = sorted_msgs[0].timestamp       # earliest message = t=0
+    time_zero = sorted_msgs[0].timestamp
 
     return tuple(
         ((msg.timestamp - time_zero).total_seconds(), msg)
@@ -161,31 +113,25 @@ def compute_replay_schedule(
     )
 
 
-# ── IO: load file ─────────────────────────────────────────────────────────────
-
 def load_export_file(path: str) -> dict[str, Any]:
     """IO function: read and JSON-parse a Telegram Desktop export file."""
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(
             f"Test messages file not found: {path}\n"
-            "Export a chat via Telegram Desktop → Settings → Export Telegram Data"
+            "Export a chat via Telegram Desktop -> Settings -> Export Telegram Data"
             " (Machine-readable JSON) and point TEST_MESSAGES_FILE at it."
         )
     return json.loads(p.read_text(encoding="utf-8"))
 
-
-# ── IO: async generator ───────────────────────────────────────────────────────
 
 async def message_stream_from_file(
     file_path: str,
 ) -> AsyncIterator[TelegramMessage]:
     """
     Async generator: yield messages from a Telegram Desktop export file,
-    replaying them with realistic relative timing.
+    replaying them with relative timing.
 
-    The generator drives the test loop; the caller iterates it with
-    `async for message in message_stream_from_file(path): ...`
     """
     logger.info(f"[TEST MODE] Loading messages from: {file_path}")
 

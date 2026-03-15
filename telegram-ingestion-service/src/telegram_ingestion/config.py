@@ -1,13 +1,3 @@
-"""
-Configuration — pure data loaded once at startup.
-
-All runtime behaviour is controlled through environment variables.
-We use pydantic-settings so that values can come from a .env file
-(for local dev) or from real env vars (for Docker / production).
-
-This module has NO side effects: importing it does not connect to
-anything.  Connections happen in main.py after settings are loaded.
-"""
 from __future__ import annotations
 
 from functools import lru_cache
@@ -20,7 +10,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        extra="ignore",          # ignore unknown vars (e.g. Spring vars)
+        extra="ignore",
         populate_by_name=True,
     )
 
@@ -49,7 +39,7 @@ class Settings(BaseSettings):
     random_source_interval_seconds: float = Field(default="5.0", alias="RANDOM_SOURCE_INTERVAL_SECONDS")
     random_source_jitter: float = Field(default="0.2", alias="RANDOM_SOURCE_JITTER")
 
-    # ── PostgreSQL (read-only; mirrors the Spring R2DBC vars) ─────────────────
+    # ── PostgreSQL
     db_host: str = Field(default="postgres", alias="DB_HOST")
     db_port: int = Field(default=5432, alias="DB_PORT")
     db_name: str = Field(default="admin", alias="DB_NAME")
@@ -73,7 +63,7 @@ class Settings(BaseSettings):
     http_host: str = Field(default="0.0.0.0", alias="HTTP_HOST")
     http_port: int = Field(default=8080, alias="HTTP_PORT")
 
-    # ── Derived properties (pure, no IO) ──────────────────────────────────────
+    # ── Derived properties  ──────────────────────────────────────
 
     @property
     def db_dsn(self) -> str:
@@ -98,6 +88,5 @@ def get_settings() -> Settings:
     Return the singleton Settings instance.
 
     lru_cache ensures the env / .env file is read exactly once.
-    In tests you can clear this cache with get_settings.cache_clear().
     """
     return Settings()

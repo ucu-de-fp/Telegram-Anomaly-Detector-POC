@@ -1,16 +1,3 @@
-"""
-RabbitMQ publisher — IO layer.
-
-─────────────────────────────────────────────────────────────────────────────
-FUNCTIONAL PROGRAMMING NOTE — separating serialisation from IO
-─────────────────────────────────────────────────────────────────────────────
-serialise_message() is a *pure* function: bytes in, bytes out, no IO.
-publish_message() is an *IO* function: it calls the network.
-
-This separation lets us unit-test the serialisation format without spinning
-up a real RabbitMQ broker.
-─────────────────────────────────────────────────────────────────────────────
-"""
 from __future__ import annotations
 
 import asyncio
@@ -26,24 +13,7 @@ from .models import TelegramMessage
 logger = logging.getLogger(__name__)
 
 
-# ── Pure serialisation ────────────────────────────────────────────────────────
-
 def serialise_message(message: TelegramMessage) -> bytes:
-    """
-    Pure function: convert a TelegramMessage to UTF-8 JSON bytes.
-
-    Only the fields useful for downstream consumers are included.
-    The `raw` dict is excluded to keep payloads small; add it back here
-    if your consumers need the full Telegram payload.
-    """
-    # payload: dict = {
-    #     "message_id": message.message_id,
-    #     "group_telegram_id": message.group_telegram_id,
-    #     "text": message.text,
-    #     "timestamp": message.timestamp.isoformat(),
-    #     "sender_id": message.sender_id,
-    #     "sender_name": message.sender_name,
-    # }
     payload: dict = {
         "groupId": message.group.id,
         "content": message.text,
@@ -52,17 +22,9 @@ def serialise_message(message: TelegramMessage) -> bytes:
     return json.dumps(payload, ensure_ascii=False).encode("utf-8")
 
 
-# ── IO: connect ───────────────────────────────────────────────────────────────
-
 async def create_amqp_connection(
     settings: Settings,
 ) -> aio_pika.abc.AbstractRobustConnection:
-    """
-    Establish a *robust* AMQP connection.
-
-    aio-pika's RobustConnection automatically reconnects on network failures,
-    which is essential for long-running services.
-    """
     logger.info(
         f"Connecting to RabbitMQ at {settings.rabbitmq_host}:{settings.rabbitmq_port}"
     )
@@ -80,9 +42,6 @@ async def create_exchange(
 ) -> tuple[aio_pika.abc.AbstractChannel, aio_pika.abc.AbstractExchange]:
     """
     Open a channel and declare a durable topic exchange.
-
-    Using a *topic* exchange lets downstream consumers filter by routing key
-    patterns (e.g. "telegram.message.*").
     """
     channel = await connection.channel()
     await channel.set_qos(prefetch_count=10)
@@ -96,24 +55,15 @@ async def create_exchange(
     return channel, exchange
 
 
-# ── IO: publish ───────────────────────────────────────────────────────────────
-
 async def publish_message(
     exchange: aio_pika.abc.AbstractExchange,
     routing_key: str,
     message: TelegramMessage,
 ) -> None:
     """
-    Publish one TelegramMessage to the exchange.
-
-    Messages are marked PERSISTENT so they survive broker restarts.
+    Publish TelegramMessage to the exchange.
     """
     body = serialise_message(message)
-
-    # java видавала такий формат (точно?)
-    # "2026-03-07T00:09:34.183244730"
-    # python видає такий
-    # 2026-03-06T22:18:01+00:00
 
     logger.info(f"Publishing to routing key: {routing_key}. Message: {message}. Body: {body}")
     amqp_msg = aio_pika.Message(

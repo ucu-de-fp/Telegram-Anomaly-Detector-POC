@@ -1,31 +1,26 @@
 """
 Live Telegram message source via Telethon.
 
-─────────────────────────────────────────────────────────────────────────────
-HOW TELETHON AUTHENTICATION WORKS
-─────────────────────────────────────────────────────────────────────────────
 Telethon authenticates via MTProto using:
   • TELEGRAM_API_ID   — obtain at https://my.telegram.org/apps
   • TELEGRAM_API_HASH — same page
 
 On first run the client will prompt for a phone number and a one-time code
-sent by Telegram.  The session is persisted to a file (TELEGRAM_SESSION_NAME).
-For Docker deployments, mount the session file as a volume so it survives
-container restarts.
+sent by Telegram. The session is persisted to a file (TELEGRAM_SESSION_NAME).
 
 ─────────────────────────────────────────────────────────────────────────────
 CHAT-ID NORMALISATION
 ─────────────────────────────────────────────────────────────────────────────
 Telegram's internal IDs for groups / supergroups / channels are negative
-integers in Telethon events.  The group-management-service may store them
+integers in Telethon events.  The admin-api-service may store them
 in various formats (with or without leading '-').  We normalise both sides
 to their absolute-value string for matching.
 
 ─────────────────────────────────────────────────────────────────────────────
-FUNCTIONAL PROGRAMMING NOTE — push → pull conversion
+Push -> pull conversion
 ─────────────────────────────────────────────────────────────────────────────
 Telethon uses a *callback/event* model (push-based):
-  client.on(events.NewMessage()) → async def handler(event): ...
+  client.on(events.NewMessage()) -> async def handler(event): ...
 
 Our pipeline uses an *async generator* model (pull-based):
   async for message in source: ...
@@ -50,27 +45,20 @@ from ..models import TelegramMessage, TelegramGroup
 logger = logging.getLogger(__name__)
 
 
-# ── Pure conversion ───────────────────────────────────────────────────────────
-
 def _normalise_chat_id(chat_id: int | str) -> str:
     """
-    Pure helper: strip leading '-' so we can compare absolute IDs.
+    Strip leading '-100' so we can compare absolute IDs.
 
     Both the event chat_id and the stored telegram_group_id are normalised
     before comparison, making the matching format-agnostic.
     """
-    return str(chat_id).lstrip("-100")
+    return str(chat_id).lstrip("-100") # todo: lstrip("-")
 
 
 def _telethon_event_to_domain(
     event: events.NewMessage.Event,
     matched_group_id: str,
 ) -> TelegramMessage:
-    """
-    Pure(-ish) conversion: Telethon event → immutable TelegramMessage.
-
-    We read from the event object only — no further IO.
-    """
     msg: TLMessage = event.message
     return TelegramMessage(
         message_id=msg.id,
@@ -82,8 +70,6 @@ def _telethon_event_to_domain(
         raw=msg.to_dict(),
     )
 
-
-# ── IO: async generator ───────────────────────────────────────────────────────
 
 async def message_stream_from_telegram(
     settings: Settings,
@@ -102,20 +88,21 @@ async def message_stream_from_telegram(
     """
     if not settings.telegram_api_id or not settings.telegram_api_hash:
         raise ValueError(
-            "TELEGRAM_API_ID and TELEGRAM_API_HASH must be set in non-test mode"
+            "TELEGRAM_API_ID and TELEGRAM_API_HASH must be set"
         )
 
-    # Precompute a set of normalised IDs for O(1) lookup per event
     normalised_ids: frozenset[str] = frozenset(
         _normalise_chat_id(gid) for gid in group_ids
     )
+
     # Keep original IDs indexed by normalised form for clean domain objects
     id_map: dict[str, str] = {
         _normalise_chat_id(gid): gid for gid in group_ids
     }
 
     # Queue bridges the push (callback) and pull (generator) worlds
-    queue: asyncio.Queue[TelegramMessage] = asyncio.Queue(maxsize=500)
+    # TODO: move maxsize to settings
+    queue: asyncio.Queue[TelegramMessage] = asyncio.Queue(maxsize=1000)
 
     client = TelegramClient(
         settings.telegram_session_name,
@@ -127,16 +114,14 @@ async def message_stream_from_telegram(
     async def _on_new_message(event: events.NewMessage.Event) -> None:
         logger.info(f'Received telegram event: {event}')
         norm = _normalise_chat_id(event.chat_id)
-        logger.info(f'Normalized ids: {normalised_ids}, chat id: {event.chat_id}, normzlized id: {norm}')
-        if norm not in normalised_ids:
-            return                          # not a watched group — skip fast
+        logger.info(f'Normalized ids: {normalised_ids}, chat id: {event.chat_id}, normalized id: {norm}')
 
-        logger.info("processing message")
+        # TODO: remove and rely on the check in "should_publish"?
+        if norm not in normalised_ids:
+            return
 
         matched_id = id_map[norm]
         msg = _telethon_event_to_domain(event, matched_id)
-
-        logger.info(f"putting message {msg} for matched id {matched_id}")
 
         try:
             queue.put_nowait(msg)
@@ -148,7 +133,7 @@ async def message_stream_from_telegram(
 
     await client.start()
     logger.info(
-        f"[LIVE MODE] Telethon connected.  "
+        f"Telethon connected.  "
         f"Watching {len(group_ids)} group(s): {sorted(group_ids)}"
     )
 
@@ -161,5 +146,5 @@ async def message_stream_from_telegram(
             except asyncio.TimeoutError:
                 continue
     finally:
-        logger.info("[LIVE MODE] Disconnecting Telethon client …")
+        logger.info("Disconnecting Telethon client …")
         await client.disconnect()

@@ -30,25 +30,18 @@ from .models import CacheState
 
 logger = logging.getLogger(__name__)
 
-# ── Module-level mutable state (the only such state in the entire service) ───
 _current_cache: CacheState | None = None
-_lock = asyncio.Lock()          # serialises concurrent refresh calls
+_lock = asyncio.Lock()
 
-
-# ── Readers (no lock needed — reading a reference is atomic in CPython) ──────
 
 def get_cache() -> CacheState | None:
     """Return the current immutable cache snapshot (None until first load)."""
     return _current_cache
 
 
-# ── Pure cache-builder (IO: reads DB, no writes) ─────────────────────────────
-
 async def _build_cache(pool: asyncpg.Pool) -> CacheState:
     """
-    Fetch fresh data from the DB and compute the derived publishable-group set.
-
-    This function performs IO but returns a pure, immutable value.
+    Fetch fresh data from the DB and compute the derived data.
     """
     groups = await fetch_telegram_groups(pool)
     zones = await fetch_zones_of_interest(pool)
@@ -67,8 +60,6 @@ async def _build_cache(pool: asyncpg.Pool) -> CacheState:
     )
 
 
-# ── Writers (acquire lock, replace reference) ─────────────────────────────────
-
 async def refresh_cache(pool: asyncpg.Pool) -> CacheState:
     """Reload groups AND zones, recompute intersection set, swap cache."""
     global _current_cache
@@ -82,7 +73,7 @@ async def reset_groups_cache(pool: asyncpg.Pool) -> CacheState:
     """
     Reload only the telegram_groups table, recompute intersection set.
 
-    Zones are taken from the existing cache (no extra DB round-trip).
+    Zones are taken from the existing cache
     """
     global _current_cache
     async with _lock:
@@ -111,7 +102,7 @@ async def reset_zones_cache(pool: asyncpg.Pool) -> CacheState:
     """
     Reload only the zone_of_interest table, recompute intersection set.
 
-    Groups are taken from the existing cache (no extra DB round-trip).
+    Groups are taken from the existing cache.
     """
     global _current_cache
     async with _lock:
