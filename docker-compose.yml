@@ -82,30 +82,26 @@ services:
     networks:
       - monitoring-network
 
-  telegram-ingestion-telethon:
+  telegram-ingestion-service:
     profiles: ["app"]
     build:
       context: ./telegram-ingestion-service
       dockerfile: Dockerfile
-    container_name: telegram-ingestion-telethon
+    container_name: telegram-ingestion-service
     restart: unless-stopped
     ports:
-      - "8083:8080"    # cache-management HTTP API (avoid clash with other services)
+      - "8083:8080"
     env_file:
       - ./telegram-ingestion-service/.env.${APP_ENV:-example}.docker
 
     volumes:
-      # Persist the Telethon session across container restarts.
-      # On first run Telethon will prompt for your phone number and OTP;
-      # run the container interactively once to generate the session file:
-      #   docker compose run --rm telegram-ingestion-telethon
       - telegram_session:/app/session
 
     networks:
       - monitoring-network
 
     depends_on:
-      - admin-api-service # to initialize DB
+      # - admin-api-service # to initialize DB
       - postgres
       - rabbitmq
 

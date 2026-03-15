@@ -150,7 +150,7 @@ then mount the `session/` directory as a volume.
 
 Build the image:
 ```bash
-docker build -t telegram-ingestion-telethon .
+docker build -t telegram-ingestion-service .
 ```
 
 ### Docker Compose
@@ -160,12 +160,12 @@ project's `docker-compose.yml`.
 
 **Live mode:**
 ```bash
-docker compose up telegram-ingestion-telethon
+docker compose up telegram-ingestion-service
 ```
 
 **Test mode:**
 ```bash
-docker compose --profile test up telegram-ingestion-telethon-test
+docker compose --profile test up telegram-ingestion-service-test
 ```
 
 The test-mode container mounts `./test_data` into `/app/test_data` so you can
@@ -173,7 +173,7 @@ drop a `result.json` file without rebuilding the image.
 
 **Generate the Telethon session file in Docker (first time only):**
 ```bash
-docker compose run --rm -it telegram-ingestion-telethon
+docker compose run --rm -it telegram-ingestion-service
 # Enter phone number and OTP when prompted.
 # The session is saved to the 'telegram_session' named volume.
 ```
