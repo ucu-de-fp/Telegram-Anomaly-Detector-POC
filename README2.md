@@ -1,17 +1,29 @@
 # Telegram anomaly detector POC
 
 ## 1. Запуск
+### 1.1 Запуск всього стеку в докері
+`.env` файли дозволяють розділити різні оточення. Формат назви .env-файлу для docker - `<service-name>/.env.<APP_ENV>.docker`.  
+Таким чином, `APP_ENV=dev` завантажить .env-змінні з файлу `<service-name>/.env.dev.docker`. Наразі, реалізовано тільки для `telegram-ingestion-service`.
+#### 1.1.1 Запускаємо команду одноразово, щоб підключити сервіс до телеграму
+```bash
+docker compose run --rm telegram-ingestion-service
+```
 
-### 1.1 Локальний запуск окремих сервісів для розробки
+#### 1.1.2 Запускаємо стек
+```bash
+APP_ENV=dev docker compose --profile infra --profile app --parallel 8 up --build
+```
 
-#### 1.1.1 Запускаємо спільні сервіси в докері
+### 1.2 Локальний запуск окремих сервісів для розробки
+
+#### 1.2.1 Запускаємо спільні сервіси в докері
 ```bash
 docker compose --profile infra up -d
 ```
-#### 1.1.2 Конфігуруємо .env-файл потрібного сервісу, вказавши адреси спільних сервісів:
+#### 1.2.2 Конфігуруємо .env-файл потрібного сервісу, вказавши адреси спільних сервісів:
 Postgres: `localhost:5432`  
 RabbitMQ: `localhost:5672`
-#### 1.1.3 Запускаємо потрібний сервіс з командної строчки/через IDE (на прикладі telegram ingestion)
+#### 1.2.3 Запускаємо потрібний сервіс з командної строчки/через IDE (на прикладі telegram ingestion)
 ```bash
 cd telegram-ingestion-service
 
@@ -20,19 +32,6 @@ source .env.dev.local
 set +a
 
 PYTHONPATH=src poetry run python -m telegram_ingestion.main
-```
-
-### 1.2 Запуск всього стеку в докері
-#### 1.2.1 Запускаємо команду одноразово, щоб підключити сервіс до телеграму
-```bash
-docker compose run --rm telegram-ingestion-service
-```
-
-#### 1.2.2 Запускаємо стек
-`.env` файли дозволяють розділити різні оточення. Формат назви .env-файлу для docker - `<service-name>/.env.<APP_ENV>.docker`.  
-Таким чином, `APP_ENV=dev` завантажить .env-змінні з файлу `<service-name>/.env.dev.docker`. Наразі, реалізовано тільки для `telegram-ingestion-service`.
-```bash
-APP_ENV=dev docker compose --profile infra --profile app --parallel 8 up --build
 ```
 
 ## 2. Робота з додатком
