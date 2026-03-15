@@ -4,9 +4,14 @@
 ### 1.1 Запуск всього стеку в докері
 `.env` файли дозволяють розділити різні оточення. Формат назви .env-файлу для docker - `<service-name>/.env.<APP_ENV>.docker`.  
 Таким чином, `APP_ENV=dev` завантажить .env-змінні з файлу `<service-name>/.env.dev.docker`. Наразі, реалізовано тільки для `telegram-ingestion-service`.
-#### 1.1.1 Запускаємо команду одноразово, щоб підключити сервіс до телеграму
+#### 1.1.1 (Одноразово) Ініціалізуємо додаток. Ці кроки потрібні тільки у випадку, якщо telegram-ingestion-service читає повідомлення з телеграму, а не з тестових джерел
+##### 1.1.1.1 Запускаємо admin-api-service щоб ініціалізувати таблиці telegram_groups і zones_of_interest в БД (без них не запуститься telegram-ingestion-service в наступному кроці). Після старту додатку - зупиняємо виконання
 ```bash
-docker compose run --rm telegram-ingestion-service
+docker compose --profile infra run --rm admin-api-service
+```
+##### 1.1.1.2 Запускаємо команду одноразово, щоб підключити сервіс до телеграму. Після вводу номеру телефону і одноразового коду - зупиняємо виконання.
+```bash
+APP_ENV=dev docker compose --profile infra run --rm telegram-ingestion-service
 ```
 
 #### 1.1.2 Запускаємо стек

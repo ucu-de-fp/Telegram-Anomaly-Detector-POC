@@ -101,7 +101,6 @@ services:
       - monitoring-network
 
     depends_on:
-      # - admin-api-service # to initialize DB
       - postgres
       - rabbitmq
 

@@ -73,7 +73,7 @@ def parse_messages_from_export(data: dict[str, Any]) -> tuple[TelegramMessage, .
     return tuple(
         TelegramMessage(
             message_id=msg["id"],
-            group = TelegramGroup(telegram_id=group_id),
+            group=TelegramGroup(id=None, telegram_id=group_id, polygon_wkt=None),
             text=_extract_text(msg.get("text", "")),
             timestamp=_parse_date(msg["date"]),
             sender_id=str(msg.get("from_id", "")) or None,
