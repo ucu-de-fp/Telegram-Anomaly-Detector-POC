@@ -1,0 +1,71 @@
+# random_messages.toml
+# ─────────────────────────────────────────────────────────────────────────────
+# Configuration for the random test message source.
+#
+# Edit the three sections below.  TOML triple-quoted strings let you safely
+# embed JSON, quotes, or any other content in message bodies without escaping.
+#
+# Frequency is controlled by environment variables — not stored here:
+#   RANDOM_SOURCE_INTERVAL_SECONDS  (default 5.0)
+#   RANDOM_SOURCE_JITTER            (default 0.2  → ±20 %)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+# ── Groups ────────────────────────────────────────────────────────────────────
+# id   (integer) is used as group_telegram_id in TelegramMessage.
+# name (string)  is optional and informational only.
+
+[[groups]]
+id   = 3814005327
+name = "Group 1"
+
+[[groups]]
+id   = 1002
+name = "General"
+
+# ── Senders ───────────────────────────────────────────────────────────────────
+# id   (string) is used as sender_id.
+# name (string) is optional; used as sender_name.
+
+[[senders]]
+id   = "user101"
+name = "Alice"
+
+[[senders]]
+id   = "user102"
+name = "Bob"
+
+[[senders]]
+id   = "user103"
+name = "Carol"
+
+[[senders]]
+id   = "bot_001"
+name = "TestBot"
+
+
+# ── Messages ──────────────────────────────────────────────────────────────────
+# text (string) — plain message body, sampled at random.
+#
+# TOML triple-quoted strings (''') are ideal if you ever want to test
+# Telegram-style JSON payloads or multi-line content:
+#
+#   [[messages]]
+#   text = '''{"type": "event", "value": 42}'''
+
+[[messages]]
+text = "Hey, anyone around?"
+
+[[messages]]
+text = "Alert: daily standup in 5 minutes 🕐"
+
+[[messages]]
+text = "Build passed ✅"
+
+# Example: telegram-style JSON body — safe because it's a TOML string
+[[messages]]
+text = '''[
+        "Warning — ",
+        { "type": "bold", "text": "unusual activity" },
+        " spotted near the river crossing."
+      ]'''

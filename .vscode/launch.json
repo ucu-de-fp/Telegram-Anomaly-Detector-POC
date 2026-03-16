@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Telegram ingestion",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "telegram_ingestion.main",
+      "cwd": "${workspaceFolder}/telegram-ingestion-service",
+      "envFile": "${workspaceFolder}/telegram-ingestion-service/.env.dev.local",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/telegram-ingestion-service/src"
+      }
+    }
+  ]
+}

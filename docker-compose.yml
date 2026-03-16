@@ -1,5 +1,7 @@
 services:
+
   postgres:
+    profiles: ["infra"]
     image: postgis/postgis:18-3.6
     platform: linux/amd64
     container_name: monitoring-postgres
@@ -21,6 +23,7 @@ services:
       retries: 5
 
   rabbitmq:
+    profiles: ["infra"]
     image: rabbitmq:3.13-management
     container_name: monitoring-rabbitmq
     environment:
@@ -33,11 +36,12 @@ services:
       - monitoring-network
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 12
 
   admin-api-service:
+    profiles: ["app"]
     build:
       context: ./admin-api-service
       dockerfile: Dockerfile
@@ -55,6 +59,7 @@ services:
       - monitoring-network
 
   notification-service:
+    profiles: ["app"]
     build:
       context: ./notification-service
       dockerfile: Dockerfile
@@ -78,29 +83,29 @@ services:
       - monitoring-network
 
   telegram-ingestion-service:
+    profiles: ["app"]
     build:
       context: ./telegram-ingestion-service
       dockerfile: Dockerfile
     container_name: telegram-ingestion-service
-    environment:
-      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/admin
-      SPRING_R2DBC_USERNAME: monitoring
-      SPRING_R2DBC_PASSWORD: monitoring123
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_PORT: 5672
-      SPRING_RABBITMQ_USERNAME: monitoring
-      SPRING_RABBITMQ_PASSWORD: monitoring123
+    restart: unless-stopped
     ports:
-      - "8083:8083"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+      - "8083:8080"
+    env_file:
+      - ./telegram-ingestion-service/.env.${APP_ENV:-example}.docker
+
+    volumes:
+      - telegram_session:/app/session
+
     networks:
       - monitoring-network
 
+    depends_on:
+      - postgres
+      - rabbitmq
+
   anomaly-detection-service:
+    profiles: ["app"]
     build:
       context: ./anomaly-detection-service
       dockerfile: Dockerfile
@@ -119,6 +124,7 @@ services:
       - monitoring-network
 
   frontend:
+    profiles: ["app"]
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -133,6 +139,7 @@ services:
 
 volumes:
   postgres-data:
+  telegram_session:
 
 networks:
   monitoring-network:
