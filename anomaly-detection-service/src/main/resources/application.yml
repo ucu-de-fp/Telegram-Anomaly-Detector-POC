@@ -15,11 +15,7 @@ detection:
   source-queue: telegram-events
   target-queue: anomaly-notifications
   enabled-rules:
-    - "Будь-яке"
-    - "Будь-яке у групах"
     - "Термінові новини"
-    - "Ріст активності"
-    - "Комбіноване"
 
 logging:
   level:
