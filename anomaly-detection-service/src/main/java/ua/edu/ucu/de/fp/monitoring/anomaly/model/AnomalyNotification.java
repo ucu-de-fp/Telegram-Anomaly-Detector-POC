@@ -1,17 +1,19 @@
 package ua.edu.ucu.de.fp.monitoring.anomaly.model;
 
+import ua.edu.ucu.de.fp.monitoring.anomaly.rule.AnomalyRule;
+
 import java.time.LocalDateTime;
 
 public record AnomalyNotification(
     Long groupId,
-    String keyword,
+    AnomalyRule rule,
     String content,
     LocalDateTime timestamp
 ) {
-    public static AnomalyNotification fromEvent(TelegramEvent event, String keyword) {
+    public static AnomalyNotification fromEvent(TelegramEvent event, AnomalyRule rule) {
         return new AnomalyNotification(
             event.groupId(),
-            keyword,
+            rule,
             event.content(),
             event.timestamp()
         );
