@@ -1,21 +1,26 @@
 package ua.edu.ucu.de.fp.monitoring.anomaly.config;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import ua.edu.ucu.de.fp.monitoring.anomaly.model.TelegramEvent;
-import ua.edu.ucu.de.fp.monitoring.anomaly.rule.AnomalyRule;
-import ua.edu.ucu.de.fp.monitoring.anomaly.rule.impl.AnomalyRuleImpl;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Predicate;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import lombok.RequiredArgsConstructor;
+import ua.edu.ucu.de.fp.monitoring.anomaly.config.properties.DetectionProperties;
+import ua.edu.ucu.de.fp.monitoring.anomaly.model.TelegramEvent;
+import ua.edu.ucu.de.fp.monitoring.anomaly.rule.AnomalyRule;
+import ua.edu.ucu.de.fp.monitoring.anomaly.rule.impl.AnomalyRuleImpl;
+
+// todo: винести? оскільки DetectionProperties також використовується в конфізі rabbitmq
+@EnableConfigurationProperties(DetectionProperties.class)
 @Configuration
+@RequiredArgsConstructor
 public class AnomalyRuleConfig {
 
-    @Value("${detection.enabled-rules}")
-    private List<String> enabledRuleNames;
+    private final DetectionProperties properties;
 
     @Bean
     public List<AnomalyRule> anomalyRules() {
@@ -51,7 +56,7 @@ public class AnomalyRuleConfig {
                         .build()
         );
         return allAvailableRules.stream()
-                .filter(rule -> enabledRuleNames.contains(rule.getName()))
+                .filter(rule -> properties.getEnabledRules().contains(rule.getName()))
                 .toList();
     }
 

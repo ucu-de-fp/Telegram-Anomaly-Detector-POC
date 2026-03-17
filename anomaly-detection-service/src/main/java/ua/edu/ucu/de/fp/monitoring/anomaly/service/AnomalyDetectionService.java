@@ -67,6 +67,7 @@ public class AnomalyDetectionService {
 
     private AnomalyRule.Events updateHistoryAndGetWindowEvents(AnomalyRule rule, TelegramEvent newEvent) {
 
+        boolean isNewEventMuchFilterCondition = rule.getFilterCondition().test(newEvent);
         LocalDateTime windowThreshold = LocalDateTime.now().minusSeconds(rule.getWindowTimeSeconds());
         LocalDateTime historyThreshold = windowThreshold.minusSeconds(rule.getHistoryTimeSeconds());
 
@@ -74,10 +75,10 @@ public class AnomalyDetectionService {
             List<TelegramEvent> temporaryHistory = (history == null)
                     ? new java.util.ArrayList<>()
                     : new java.util.ArrayList<>(history);
-            if (rule.getFilterCondition().test(newEvent)) {
+            if (isNewEventMuchFilterCondition) {
                 temporaryHistory.add(newEvent);
             }
-            return temporaryHistory;
+            return temporaryHistory.stream().filter(e -> e.timestamp().isAfter(historyThreshold)).toList();
         });
 
         return new AnomalyRule.Events(
@@ -85,11 +86,10 @@ public class AnomalyDetectionService {
                         ? updatedHistory.stream()
                                 .filter(e -> e.timestamp().isAfter(windowThreshold))
                                 .toList()
-                        : List.of(newEvent),
+                        : isNewEventMuchFilterCondition ? List.of(newEvent) : List.of(),
                 rule.getHistoryTimeSeconds() > 0
                         ? updatedHistory.stream()
-                                .filter(e -> e.timestamp().isBefore(windowThreshold)
-                                        && e.timestamp().isAfter(historyThreshold))
+                                .filter(e -> e.timestamp().isBefore(windowThreshold))
                                 .toList()
                         : List.of()
         );

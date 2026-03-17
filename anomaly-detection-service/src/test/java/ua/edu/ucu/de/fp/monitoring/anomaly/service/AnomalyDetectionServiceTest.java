@@ -1,22 +1,23 @@
 package ua.edu.ucu.de.fp.monitoring.anomaly.service;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
+
 import tools.jackson.databind.json.JsonMapper;
 import ua.edu.ucu.de.fp.monitoring.anomaly.config.AnomalyRuleConfig;
+import ua.edu.ucu.de.fp.monitoring.anomaly.config.properties.DetectionProperties;
 import ua.edu.ucu.de.fp.monitoring.anomaly.model.TelegramEvent;
 import ua.edu.ucu.de.fp.monitoring.anomaly.rule.AnomalyRule;
-
-import java.time.LocalDateTime;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 
 class AnomalyDetectionServiceTest {
 
@@ -29,14 +30,15 @@ class AnomalyDetectionServiceTest {
     void setUp() {
         rabbitTemplate = mock(RabbitTemplate.class);
         jsonMapper = JsonMapper.builder().findAndAddModules().build();
-        AnomalyRuleConfig config = new AnomalyRuleConfig();
-        ReflectionTestUtils.setField(config, "enabledRuleNames", List.of(
+        DetectionProperties properties = new DetectionProperties();
+        properties.setEnabledRules(List.of(
                 "Будь-яке",
                 "Будь-яке у групах",
                 "Термінові новини",
                 "Ріст активності",
                 "Комбіноване"
         ));
+        AnomalyRuleConfig config = new AnomalyRuleConfig(properties);
         List<AnomalyRule> anomalyRules = config.anomalyRules();
         service = new AnomalyDetectionService(rabbitTemplate, jsonMapper, anomalyRules);
         service.setTargetQueue(QUEUE);
@@ -44,19 +46,19 @@ class AnomalyDetectionServiceTest {
     }
 
     @Test
-    @DisplayName("Stateless правила: Будь-яке та Термінові новини")
+    @DisplayName("Stateless правила: Будь-яке, Будь-яке у групах та Термінові новини")
     void testStatelessRules() throws Exception {
         // Подія, що підпадає під "Будь-яке", "Будь-яке у групах (гр.1)" та "Термінові новини (warning)"
-        var event = new TelegramEvent(1L, "System warning alert", LocalDateTime.now());
+        var event = new TelegramEvent(1L, "System Warning alert", LocalDateTime.now());
 
         service.processEvent(jsonMapper.writeValueAsString(event));
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
         // Очікуємо 3 аномалії: "Будь-яке", "Будь-яке у групах", "Термінові новини"
         verify(rabbitTemplate, times(3)).convertAndSend(eq(QUEUE), captor.capture());
-
         List<String> results = captor.getAllValues();
         assertTrue(results.stream().anyMatch(s -> s.contains("Будь-яке")));
+        assertTrue(results.stream().anyMatch(s -> s.contains("Будь-яке у групах")));
         assertTrue(results.stream().anyMatch(s -> s.contains("Термінові новини")));
     }
 
