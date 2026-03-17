@@ -20,8 +20,6 @@ import ua.edu.ucu.de.fp.monitoring.anomaly.rule.impl.AnomalyRuleImpl;
 @RequiredArgsConstructor
 public class AnomalyRuleConfig {
 
-//     @Value("${detection.enabled-rules}")
-//     private List<String> enabledRuleNames;
     private final DetectionProperties properties;
 
     @Bean
