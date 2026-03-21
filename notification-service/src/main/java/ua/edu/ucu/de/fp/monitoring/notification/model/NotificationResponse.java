@@ -5,7 +5,8 @@ import java.time.LocalDateTime;
 public record NotificationResponse(
     Long id,
     Long groupId,
-    String keyword,
+    String ruleName,
+    String ruleDescription,
     String content,
     LocalDateTime timestamp,
     Boolean isRead
