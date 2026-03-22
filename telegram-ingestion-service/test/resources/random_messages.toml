@@ -62,10 +62,6 @@ text = "Alert: daily standup in 5 minutes 🕐"
 [[messages]]
 text = "Build passed ✅"
 
-# Example: telegram-style JSON body — safe because it's a TOML string
 [[messages]]
-text = '''[
-        "Warning — ",
-        { "type": "bold", "text": "unusual activity" },
-        " spotted near the river crossing."
-      ]'''
+text = '''Warning - unusual activity spotted 
+near the river crossing.'''
