@@ -183,7 +183,7 @@ def _make_random_message(
 
     return TelegramMessage(
         message_id=message_id,
-        group=TelegramGroup(id=None, telegram_id=group.id, polygon_wkt=None),
+        telegram_group_id=group.id,
         text=text,
         timestamp=datetime.now(tz=timezone.utc),
         sender_id=sender.id,
@@ -248,7 +248,7 @@ async def message_stream_random(
         logger.info(
             "[RANDOM MODE] ▶  emitting msg_id=%d  group=%d  sender=%s",
             message.message_id,
-            message.group.telegram_id,
+            message.telegram_group_id,
             message.sender_name or message.sender_id,
         )
         yield message

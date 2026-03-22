@@ -6,12 +6,12 @@ from .models import CacheState, TelegramMessage
 
 logger = logging.getLogger(__name__)
 
-def should_publish(message: TelegramMessage, cache: CacheState) -> bool:
+def should_publish(telegram_group_id: str, cache: CacheState) -> bool:
     """
     Returns True if the message's source group is in the pre-computed set
     of groups that should be processed.
     """
-    return message.group.telegram_id in cache.publishable_group_ids
+    return telegram_group_id in cache.publishable_group_ids
 
 
 def filter_messages(

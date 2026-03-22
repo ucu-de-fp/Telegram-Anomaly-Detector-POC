@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict, field_serializer
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any
 
+from .util.serialization import to_camel_case
 
-# @dataclass(frozen=True)
-@dataclass # TODO: make frozen=True
+
+@dataclass(frozen=True)
 class TelegramGroup:
     """
     A Telegram group/channel tracked by the system.
@@ -42,14 +44,31 @@ class TelegramMessage:
     """
 
     message_id: int
-    group: TelegramGroup
+    telegram_group_id: int
     text: str
     timestamp: datetime
     sender_id: str | None
     sender_name: str | None
     raw: dict[str, Any]
 
+class DetectionMessage(BaseModel):
+    message_id: int
+    group_id: int
+    content: str
+    timestamp: datetime
+    sender_id: str | None
+    sender_name: str | None
+    raw: dict[str, Any]
 
+    model_config = ConfigDict(
+        alias_generator=to_camel_case,
+        populate_by_name=True,
+    )
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, value: datetime) -> str:
+        return value.replace(tzinfo=None).isoformat()
+    
 @dataclass(frozen=True)
 class CacheState:
     """

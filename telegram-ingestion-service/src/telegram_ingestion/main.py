@@ -40,8 +40,13 @@ import asyncio
 import logging
 import os
 
+from collections.abc import AsyncIterator
+
 import uvicorn
 
+from .source.source import get_message_source
+from .models import CacheState, TelegramMessage, DetectionMessage
+from .error import GroupMappingNotFoundError
 from .cache import refresh_cache, get_cache
 from .config import get_settings
 from .database import create_db_pool
@@ -59,28 +64,32 @@ logger = logging.getLogger(__name__)
 
 # ── Pipeline ──────────────────────────────────────────────────────────────────
 
+from typing import Union
+
+def convert_to_detection_message(
+    message: TelegramMessage,
+    cache: CacheState,
+) -> Union[DetectionMessage, GroupMappingNotFoundError]:
+    group_id = cache.group_id_mapping.get(message.telegram_group_id)
+
+    if group_id is None:
+        return GroupMappingNotFoundError(message.telegram_group_id)
+
+    return DetectionMessage(
+        message_id=message.message_id,
+        group_id=group_id,
+        content=message.text,
+        timestamp=message.timestamp,
+        sender_id=message.sender_id,
+        sender_name=message.sender_name,
+        raw=message.raw,
+    )
+
 async def run_message_pipeline(settings, exchange) -> None:
     """
     Core message pipeline: source → filter → publish.
     """
-    if settings.message_source == "FILE":
-        from .source.file_source import message_stream_from_file
-        source = message_stream_from_file(settings.test_messages_file)
-        logger.info("[TEST MODE] Using file-based message source")
-    elif settings.message_source == "TELEGRAM":
-        from .source.telegram_source import message_stream_from_telegram
-        current_cache = get_cache()
-        group_ids: frozenset[str] = (
-            frozenset(g.telegram_id for g in current_cache.groups)
-            if current_cache else frozenset()
-        )
-        logger.info(f'Listening to groups with ids: {group_ids}')
-        source = message_stream_from_telegram(settings, group_ids)
-        logger.info("[LIVE MODE] Using Telethon message source")
-    else:
-        from .source.random_messages_source import message_stream_random
-        source = message_stream_random(settings)
-        logger.info("[TEST MODE] Using randomized message source")
+    source: AsyncIterator[TelegramMessage] = get_message_source(settings)
 
     published = 0
     filtered = 0
@@ -92,35 +101,25 @@ async def run_message_pipeline(settings, exchange) -> None:
             logger.warning("Cache not loaded yet — skipping message")
             continue
 
-        group_id = cache.group_id_mapping.get(message.group.telegram_id)
-        if group_id is None:
-            logger.warning(
-                "Unknown telegram group id %s (no mapping in cache) - skipping",
-                message.group.telegram_id,
-            )
-            filtered += 1
+        result: DetectionMessage = convert_to_detection_message(message, cache)
+        if isinstance(result, GroupMappingNotFoundError):
+            logger.warning(f"Skipping: {result}")
             continue
 
-        message.group.id = group_id
-        logger.info(
-            "Found internal group id %s by telegram group id %s",
-            message.group.id,
-            message.group.telegram_id,
-        )
-
-        if should_publish(message, cache):
-            await publish_message(exchange, settings.rabbitmq_routing_key, message)
+        if should_publish(message.telegram_group_id, cache):
+            logger.info(f"Detection message: {result}")
+            await publish_message(exchange, settings.rabbitmq_routing_key, result)
             published += 1
             logger.info(
                 f"✓ PUBLISHED  msg_id={message.message_id} "
-                f"group={message.group.telegram_id} "
+                f"group={message.telegram_group_id} "
                 f'text="{message.text[:60]}"'
             )
         else:
             filtered += 1
             logger.info(
                 f"✗ filtered   msg_id={message.message_id} "
-                f"group={message.group.telegram_id} (not in any active zone)"
+                f"group={message.telegram_group_id} (not in any active zone)"
             )
 
     # Reached only in test mode (file source exhausted)

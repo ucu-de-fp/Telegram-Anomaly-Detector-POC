@@ -8,18 +8,13 @@ import aio_pika
 import aio_pika.abc
 
 from .config import Settings
-from .models import TelegramMessage
+from .models import DetectionMessage, TelegramMessage
 
 logger = logging.getLogger(__name__)
 
 
-def serialise_message(message: TelegramMessage) -> bytes:
-    payload: dict = {
-        "groupId": message.group.id,
-        "content": message.text,
-        "timestamp": message.timestamp.replace(tzinfo=None).isoformat()
-    }
-    return json.dumps(payload, ensure_ascii=False).encode("utf-8")
+def serialise_message(message: DetectionMessage) -> bytes:
+    return message.model_dump_json(by_alias=True).encode("utf-8")
 
 
 async def create_amqp_connection(
@@ -58,10 +53,10 @@ async def create_exchange(
 async def publish_message(
     exchange: aio_pika.abc.AbstractExchange,
     routing_key: str,
-    message: TelegramMessage,
+    message: DetectionMessage,
 ) -> None:
     """
-    Publish TelegramMessage to the exchange.
+    Publish DetectionMessage to the exchange.
     """
     body = serialise_message(message)
 
@@ -75,5 +70,6 @@ async def publish_message(
     await exchange.publish(amqp_msg, routing_key=routing_key)
     logger.info(
         f"→ RabbitMQ [{routing_key}] "
-        f"msg_id={message.message_id} group={message.group.telegram_id}"
+        f"msg={message}"
+        # f"msg_id={message.message_id} group={message.group_id}"
     )

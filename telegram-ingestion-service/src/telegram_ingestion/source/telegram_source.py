@@ -62,7 +62,7 @@ def _telethon_event_to_domain(
     msg: TLMessage = event.message
     return TelegramMessage(
         message_id=msg.id,
-        group=TelegramGroup(id=None, telegram_id=matched_group_id, polygon_wkt=None),
+        telegram_group_id=matched_group_id,
         text=msg.text or "",
         timestamp=msg.date,
         sender_id=str(msg.sender_id) if msg.sender_id else None,
