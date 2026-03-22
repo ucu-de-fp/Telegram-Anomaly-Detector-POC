@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
     group_id BIGINT NOT NULL,
-    keyword VARCHAR(100),
+    rule_name TEXT,
+    rule_description TEXT,
     content TEXT,
     timestamp TIMESTAMP NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE

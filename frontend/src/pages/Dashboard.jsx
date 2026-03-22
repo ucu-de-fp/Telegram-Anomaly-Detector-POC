@@ -374,7 +374,7 @@ const Dashboard = () => {
               <tr>
                 <th>Time</th>
                 <th>Group</th>
-                <th>Keyword</th>
+                <th>Rule</th>
                 <th>Content</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -402,7 +402,11 @@ const Dashboard = () => {
                       );
                     })()}
                   </td>
-                  <td><span className="keyword-badge">{notif.keyword}</span></td>
+                  <td>
+                    <span className="rule-badge" title={notif.ruleDescription || ''}>
+                      {notif.ruleName || 'Unknown rule'}
+                    </span>
+                  </td>
                   <td>{notif.content}</td>
                   <td>{notif.isRead ? 'Read' : 'Unread'}</td>
                   <td>

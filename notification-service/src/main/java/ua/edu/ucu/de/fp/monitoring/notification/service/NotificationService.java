@@ -17,6 +17,7 @@ import ua.edu.ucu.de.fp.monitoring.notification.model.NotificationStreamEvent;
 import ua.edu.ucu.de.fp.monitoring.notification.repository.NotificationRepository;
 
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -38,7 +39,8 @@ public class NotificationService {
         new Notification(
             null,
             event.groupId(),
-            event.keyword(),
+            event.ruleName(),
+            event.ruleDescription(),
             event.content(),
             event.timestamp(),
             false
@@ -48,14 +50,15 @@ public class NotificationService {
         new NotificationResponse(
             notification.getId(),
             notification.getGroupId(),
-            notification.getKeyword(),
+            notification.getRuleName(),
+            notification.getRuleDescription(),
             notification.getContent(),
             notification.getTimestamp(),
             notification.getIsRead()
         );
 
     private final Function<Collection<Long>, Set<Long>> toIdSet = groupIds -> groupIds.stream()
-        .filter(id -> id != null)
+        .filter(Objects::nonNull)
         .collect(Collectors.toSet());
     
     // Listen to RabbitMQ and process notifications
