@@ -31,8 +31,8 @@ public class AnomalyRuleConfig {
                         .build(),
                 AnomalyRuleImpl.builder()
                         .name("Будь-яке у групах")
-                        .description("Спрацьовує на будь яке повідомлення у групах [1] та [2]")
-                        .filterCondition(groupIdIn(1L, 2L))
+                        .description("Спрацьовує на будь яке повідомлення у групах [3814005327] та [3814005328]")
+                        .filterCondition(groupIdIn(3814005327L, 3814005328L))
                         .build(),
                 AnomalyRuleImpl.builder()
                         .name("Термінові новини")
@@ -48,10 +48,10 @@ public class AnomalyRuleConfig {
                         .build(),
                 AnomalyRuleImpl.builder()
                         .name("Комбіноване")
-                        .description("Спрацьовує коли кількість повідомлень зі словом \"ufo\" у групі [3] зростає більш ніж на 10 відсотків за 5 сек.")
+                        .description("Спрацьовує коли кількість повідомлень зі символом \"!\" у групі [1002] зростає більш ніж на 10 відсотків за 5 сек.")
                         .windowTimeSeconds(5)
                         .historyTimeSeconds(60)
-                        .filterCondition(groupIdIn(3L).and(containsAny("ufo")))
+                        .filterCondition(groupIdIn(1002L).and(containsAny("!")))
                         .anomalyCondition(numberIncreaseMoreThen(calculateCoefficient(5, 60, 0.1f)))
                         .build()
         );
