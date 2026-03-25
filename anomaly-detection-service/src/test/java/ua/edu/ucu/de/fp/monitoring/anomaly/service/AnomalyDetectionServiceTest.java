@@ -48,13 +48,13 @@ class AnomalyDetectionServiceTest {
     @Test
     @DisplayName("Stateless правила: Будь-яке, Будь-яке у групах та Термінові новини")
     void testStatelessRules() throws Exception {
-        // Подія, що підпадає під "Будь-яке", "Будь-яке у групах (гр.1)" та "Термінові новини (warning)"
-        var event = new TelegramEvent(1L, "System Warning alert", LocalDateTime.now());
+        // Групи в конфігу: 3814005327 та 3814005328
+        var event = new TelegramEvent(3814005327L, "System Warning alert", LocalDateTime.now());
 
         service.processEvent(jsonMapper.writeValueAsString(event));
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        // Очікуємо 3 аномалії: "Будь-яке", "Будь-яке у групах", "Термінові новини"
+        // Очікуємо 3 аномалії
         verify(rabbitTemplate, times(3)).convertAndSend(eq(QUEUE), captor.capture());
         List<String> results = captor.getAllValues();
         assertTrue(results.stream().anyMatch(s -> s.contains("Будь-яке")));
@@ -63,29 +63,28 @@ class AnomalyDetectionServiceTest {
     }
 
     @Test
-    @DisplayName("Правило: Ріст активності (Trend detection)")
+    @DisplayName("Правило: Ріст активності (Trend detection 30s/90s + 50%)")
     void testActivityGrowthRule() throws Exception {
-        // Налаштування: window 10s, history 50s. Коефіцієнт ~0.24
-        // Потрібно: windowEvents.size > historyEvents.size * 0.24
+        // Коефіцієнт (30/90) * 1.5 = 0.5
 
-        // 1. Створюємо "історію" (старі повідомлення) - 10 штук
+        // 1. Створюємо історію - 10 повідомлень (historyThreshold = now - 120s, windowThreshold = now - 30s)
         for (int i = 0; i < 10; i++) {
-            var oldEvent = new TelegramEvent(5L, "Old msg", LocalDateTime.now().minusSeconds(20));
+            var oldEvent = new TelegramEvent(5L, "Old msg", LocalDateTime.now().minusSeconds(40));
             service.processEvent(jsonMapper.writeValueAsString(oldEvent));
         }
-        // Очистимо виклики rabbitTemplate, які могли статися через правило "Будь-яке"
         clearInvocations(rabbitTemplate);
 
-        // 2. Додаємо нове повідомлення в поточне вікно
-        // Тепер history=10, window=1. 1 > 10 * 0.24 = 2.4 (False) - Аномалії бути не повинно
+        // 2. Додаємо 3 повідомлення у вікно (30с)
+        // 3 > 10 * 0.5 = 5 (False)
         var currentEvent = new TelegramEvent(5L, "Current msg", LocalDateTime.now());
-        service.processEvent(jsonMapper.writeValueAsString(currentEvent));
-
-        // Перевіряємо, що аномалія "Ріст активності" не відправлена (тільки базові правила)
+        for (int i = 0; i < 3; i++) {
+            service.processEvent(jsonMapper.writeValueAsString(currentEvent));
+        }
         verifyAnomalyNotSent("Ріст активності");
 
-        // 3. Додаємо ще 3 повідомлення (разом 4 у вікні)
-        // 4 > 10 * 0.24 = 2.4 (True)
+        // 3. Додаємо ще 3 повідомлення (разом 6 у вікні)
+        // 6 > 10 * 0.5 = 5 (True)
+        service.processEvent(jsonMapper.writeValueAsString(currentEvent));
         service.processEvent(jsonMapper.writeValueAsString(currentEvent));
         service.processEvent(jsonMapper.writeValueAsString(currentEvent));
 
@@ -93,32 +92,27 @@ class AnomalyDetectionServiceTest {
     }
 
     @Test
-    @DisplayName("Правило: Комбіноване (Filter + Trend)")
+    @DisplayName("Правило: Комбіноване (Filter + Trend 30s/90s + 150%)")
     void testCombinedRule() throws Exception {
-        // Слово "ufo" у групі 3. window 5s, history 60s.
-        Long targetGroup = 3L;
+        // Коефіцієнт (30/90) * 2.5 = 0.833
+        Long targetGroup = 1002L;
 
-        // 1. Події в іншій групі або без слова "ufo" не мають впливати
-        service.processEvent(jsonMapper.writeValueAsString(new TelegramEvent(targetGroup, "hello", LocalDateTime.now())));
-        service.processEvent(jsonMapper.writeValueAsString(new TelegramEvent(4L, "ufo", LocalDateTime.now())));
-
+        // 1. Історія: 6 повідомлень з "!" у групі 1002
+        for (int i = 0; i < 10; i++) {
+            service.processEvent(jsonMapper.writeValueAsString(
+                    new TelegramEvent(targetGroup, "Alarm!", LocalDateTime.now().minusSeconds(45))));
+        }
         clearInvocations(rabbitTemplate);
 
-        // 2. Створюємо історію для правила (гр.3 + "ufo") - 5 повідомлень
-        for (int i = 0; i < 5; i++) {
-            service.processEvent(jsonMapper.writeValueAsString(
-                    new TelegramEvent(targetGroup, "ufo spotted", LocalDateTime.now().minusSeconds(10))));
+        // 2. Вікно: 5 повідомлень
+        // 5 > 6 * 0.833 = 4.998 (True)
+        var currentEvent = new TelegramEvent(targetGroup, "Danger!", LocalDateTime.now());
+        for (int i = 0; i < 9; i++) {
+            service.processEvent(jsonMapper.writeValueAsString(currentEvent));
         }
-
-        // 3. Додаємо повідомлення у вікно
-        // Коефіцієнт для 5s/60s + 10% ≈ 0.09. 1 > 5 * 0.09 (True)
-        service.processEvent(jsonMapper.writeValueAsString(
-                new TelegramEvent(targetGroup, "ufo here", LocalDateTime.now())));
 
         verifyAnomalySent("Комбіноване");
     }
-
-    // --- Допоміжні методи для scannability ---
 
     private void verifyAnomalySent(String ruleName) {
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
