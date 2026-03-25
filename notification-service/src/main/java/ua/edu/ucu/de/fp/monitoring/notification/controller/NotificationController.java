@@ -19,6 +19,8 @@ import ua.edu.ucu.de.fp.monitoring.notification.model.NotificationResponse;
 import ua.edu.ucu.de.fp.monitoring.notification.model.NotificationStreamEvent;
 import ua.edu.ucu.de.fp.monitoring.notification.service.NotificationService;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
@@ -30,10 +32,11 @@ public class NotificationController {
     @GetMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<NotificationStreamEvent> streamNotifications(
             @RequestParam(name = "groupIds", required = false) java.util.List<Long> groupIds) {
-        if (groupIds == null) {
-            return service.getNotificationStream();
-        }
-        return service.getNotificationStreamByGroupIds(groupIds);
+        return Optional
+                .ofNullable(groupIds)
+                .filter(ids -> !ids.isEmpty())
+                .map(service::getNotificationStreamByGroupIds)
+                .orElseGet(service::getNotificationStream);
     }
     
     @GetMapping("/history")
