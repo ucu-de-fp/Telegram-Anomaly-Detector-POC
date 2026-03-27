@@ -30,28 +30,23 @@ public class AnomalyRuleConfig {
                         .description("Спрацьовує на будь яке повідомлення")
                         .build(),
                 AnomalyRuleImpl.builder()
-                        .name("Будь-яке у групах")
-                        .description("Спрацьовує на будь яке повідомлення у групах [3814005327] та [3814005328]")
-                        .filterCondition(groupIdIn(3814005327L, 3814005328L))
-                        .build(),
-                AnomalyRuleImpl.builder()
                         .name("Термінові новини")
                         .description("Спрацьовує коли у повідомлені слово \"warning\", або \"news\" та \"breaking\".")
                         .filterCondition(contains("warning").or(containsAll("news", "breaking")))
                         .build(),
                 AnomalyRuleImpl.builder()
                         .name("Ріст активності")
-                        .description("Спрацьовує коли кількість повідомлень у групі зростає більш ніж на 20 відсотків за 10 сек.")
+                        .description("Спрацьовує коли кількість повідомлень у групі зростає більш ніж на 100 відсотків за 30 сек.")
                         .windowTimeSeconds(30)
-                        .historyTimeSeconds(90)
-                        .anomalyCondition(numberIncreaseMoreThen(calculateCoefficient(30, 90, 0.5f)))
+                        .historyTimeSeconds(120)
+                        .anomalyCondition(numberIncreaseMoreThen(calculateCoefficient(30, 120, 1.0f)))
                         .build(),
                 AnomalyRuleImpl.builder()
                         .name("Комбіноване")
-                        .description("Спрацьовує коли кількість повідомлень зі символом \"!\" у групі [1002] зростає більш ніж на 10 відсотків за 5 сек.")
+                        .description("Спрацьовує коли кількість повідомлень зі символом \"!\" у групі [1002] зростає більш ніж на 150 відсотків за 30 сек.")
                         .windowTimeSeconds(30)
                         .historyTimeSeconds(90)
-                        .filterCondition(groupIdIn(1002L).and(containsAny("!")))
+                        .filterCondition(containsAny("!"))
                         .anomalyCondition(numberIncreaseMoreThen(calculateCoefficient(30, 90, 1.5f)))
                         .build()
         );
