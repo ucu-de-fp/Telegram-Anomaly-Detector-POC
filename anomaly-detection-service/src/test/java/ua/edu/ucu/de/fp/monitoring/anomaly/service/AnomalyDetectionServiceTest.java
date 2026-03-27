@@ -60,7 +60,7 @@ class AnomalyDetectionServiceTest {
     }
 
     @Test
-    @DisplayName("Правило: Ріст активності (Trend detection 30s/90s + 50%)")
+    @DisplayName("Правило: Ріст активності (Trend detection)")
     void testActivityGrowthRule() throws Exception {
         for (int i = 0; i < 10; i++) {
             var oldEvent = new TelegramEvent(5L, "Old msg", LocalDateTime.now().minusSeconds(40));
@@ -82,7 +82,7 @@ class AnomalyDetectionServiceTest {
     }
 
     @Test
-    @DisplayName("Правило: Комбіноване (Filter + Trend 30s/90s + 150%)")
+    @DisplayName("Правило: Комбіноване (Filter + Trend)")
     void testCombinedRule() throws Exception {
         Long targetGroup = 1002L;
 
