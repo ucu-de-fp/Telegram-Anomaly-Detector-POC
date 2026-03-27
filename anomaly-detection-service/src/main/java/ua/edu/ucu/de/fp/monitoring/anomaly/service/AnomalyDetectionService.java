@@ -46,6 +46,7 @@ public class AnomalyDetectionService {
     public void processEvent(String message) {
         try {
             TelegramEvent event = jsonMapper.readValue(message, TelegramEvent.class);
+            log.info("Received event: {}", event);
 
             anomalyRules.forEach(rule -> {
                 AnomalyRule.Events events = updateHistoryAndGetWindowEvents(rule, event);

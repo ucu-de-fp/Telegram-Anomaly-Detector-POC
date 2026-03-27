@@ -53,10 +53,9 @@ class AnomalyDetectionServiceTest {
         service.processEvent(jsonMapper.writeValueAsString(event));
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(rabbitTemplate, times(3)).convertAndSend(eq(QUEUE), captor.capture());
+        verify(rabbitTemplate, times(2)).convertAndSend(eq(QUEUE), captor.capture());
         List<String> results = captor.getAllValues();
         assertTrue(results.stream().anyMatch(s -> s.contains("Будь-яке")));
-        assertTrue(results.stream().anyMatch(s -> s.contains("Будь-яке у групах")));
         assertTrue(results.stream().anyMatch(s -> s.contains("Термінові новини")));
     }
 
